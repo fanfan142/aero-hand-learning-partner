@@ -4,11 +4,25 @@
 
 [![Live Demo](https://img.shields.io/badge/🌐-在线访问-brightgreen)](https://aero-hand-learning-partner.vercel.app)
 [![GitHub](https://img.shields.io/badge/源码-GitHub-blue)](https://github.com/fanfan142/aero-hand-learning-partner)
-[![Version](https://img.shields.io/badge/版本-v1.1.0-success)](https://github.com/fanfan142/aero-hand-learning-partner)
+[![Version](https://img.shields.io/badge/版本-v1.2.0-success)](https://github.com/fanfan142/aero-hand-learning-partner)
 
 ---
 
 ## ✨ 功能特性
+
+### 🌌 知识图谱 (v1.2.0新增)
+- **宇宙风格交互脑图** - 像行星一样漂浮的知识节点
+- **ECharts Graph可视化** - 力导向图布局，支持缩放拖拽
+- **节点详情** - 点击展开实现代码、前置知识、关联功能
+- **漂浮动画** - 动态星空背景，节点漂浮效果
+- **分类展示** - 7大技术分类（硬件、固件、SDK、仿真、ROS2、RL、Sim2Real）
+
+### 📚 技术文档中心 (v1.2.0新增)
+- **AI生成文档** - 12月29-30日生成的6个深度技术文档
+- **学习路径方案** - 快速上手、完整掌握、研究深入三种路径
+- **分层学习模块** - 6个阶段的详细学习指南
+- **模块化学习** - 4个模块（通信协议、运动学、系统集成、高级应用）
+- **在线Markdown查看** - 直接在浏览器中阅读技术文档
 
 ### 🏠 独立首页 (v1.1.0新增)
 - **官方项目链接** - 最显眼位置展示官方文档和GitHub仓库
@@ -91,6 +105,18 @@ npm run preview
 ---
 
 ## 📖 更新日志
+
+### v1.2.0 (2025-01-09) - 知识图谱和技术文档
+- ✨ 新增宇宙风格交互式知识图谱页面
+  - ECharts Graph 力导向图
+  - 漂浮动画效果，星空背景
+  - 节点详情展示（代码、前置知识、关联）
+- ✨ 新增技术文档中心
+  - 整理AI生成的6个深度技术文档
+  - 学习路径方案和模块化学习
+  - 在线Markdown查看器
+- 🎨 代码块背景色优化（浅蓝色 #e6f3ff）
+- 📝 新增导航：知识图谱、技术文档
 
 ### v1.1.0 (2024-01-09) - 重大功能更新
 - ✨ 新增独立首页组件，展示官方项目链接和功能介绍

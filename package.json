@@ -1,6 +1,6 @@
 {
   "name": "aero-hand-learning-partner",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Aero Hand 智能学习伙伴 - 个性化交互式学习系统",
   "type": "module",
   "scripts": {
