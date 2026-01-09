@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import Welcome from '@/views/Welcome.vue'
 import Home from '@/views/Home.vue'
 import KnowledgeBase from '@/views/KnowledgeBase.vue'
 import HardwareChecklist from '@/views/HardwareChecklist.vue'
@@ -8,7 +9,13 @@ import ProjectStructure from '@/views/ProjectStructure.vue'
 const routes = [
   {
     path: '/',
-    name: 'Home',
+    name: 'Welcome',
+    component: Welcome,
+    meta: { title: '首页' }
+  },
+  {
+    path: '/learning',
+    name: 'Learning',
     component: Home,
     meta: { title: '学习进度' }
   },

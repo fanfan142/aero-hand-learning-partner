@@ -1,63 +1,5 @@
 <template>
   <div class="home-page">
-    <!-- 欢迎介绍 -->
-    <div class="welcome-intro card mb-3">
-      <div class="intro-header">
-        <h1>🎓 欢迎使用 Aero Hand 智能学习伙伴</h1>
-        <p class="intro-subtitle">系统学习肌腱驱动灵巧机械手项目</p>
-      </div>
-
-      <el-divider />
-
-      <div class="intro-content">
-        <div class="intro-section">
-          <h3>📖 什么是 Aero Hand？</h3>
-          <p>Aero Hand Open 是一个<strong>开源的肌腱驱动灵巧机械手项目</strong>，由 TetherIA 设计开发。与昂贵的专有解决方案不同，该项目专注于<strong>简单性</strong>、<strong>可靠性</strong>和<strong>可访问性</strong>，使用标准3D打印和现成的电子元件。</p>
-        </div>
-
-        <el-row :gutter="20" class="mt-4">
-          <el-col :span="12">
-            <div class="feature-box">
-              <h4>🎯 这个网站能做什么？</h4>
-              <ul class="feature-list">
-                <li>✅ 追踪你的学习进度</li>
-                <li>✅ 提供完整的技术知识库</li>
-                <li>✅ 列出详细的硬件清单</li>
-                <li>✅ 解读项目文件结构</li>
-                <li>✅ AI助手随时答疑</li>
-              </ul>
-            </div>
-          </el-col>
-          <el-col :span="12">
-            <div class="feature-box">
-              <h4>🛠️ 涵盖的技术栈</h4>
-              <ul class="tech-list">
-                <li>🔧 硬件：ESP32-S3、HLS3606M舵机、3D打印</li>
-                <li>💻 固件：Arduino框架、串口协议</li>
-                <li>🐍 SDK：Python控制接口</li>
-                <li>🎮 仿真：MuJoCo物理引擎</li>
-                <li>🤖 AI：PPO强化学习算法</li>
-                <li>🔄 Sim2Real：从仿真到实物</li>
-              </ul>
-            </div>
-          </el-col>
-        </el-row>
-
-        <el-alert
-          type="info"
-          :closable="false"
-          class="mt-4 storage-notice"
-        >
-          <template #title>
-            <div class="notice-content">
-              <strong>💾 数据存储说明：</strong>
-              <span>学习进度和AI配置保存在<strong>浏览器本地</strong>，每个设备独立存储。换设备或清除浏览器数据会丢失进度，请注意备份！</span>
-            </div>
-          </template>
-        </el-alert>
-      </div>
-    </div>
-
     <!-- 进度概览 -->
     <div class="progress-overview card mb-3">
       <div class="overview-header">
@@ -256,9 +198,11 @@ const handleTaskClick = (task) => {
 }
 
 const handleTaskCheck = (taskId, val) => {
+  learningStore.toggleTaskComplete(taskId, val)
   if (val) {
-    learningStore.markTaskComplete(taskId)
     ElMessage.success('任务完成！')
+  } else {
+    ElMessage.info('任务已取消完成')
   }
 }
 
@@ -274,89 +218,23 @@ const copyCommand = (cmd) => {
   margin: 0 auto;
 }
 
-.welcome-intro {
+.card {
   background: white;
   border-radius: 12px;
   padding: 30px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
-.intro-header {
-  text-align: center;
-  margin-bottom: 20px;
+.mb-3 {
+  margin-bottom: 24px;
 }
 
-.intro-header h1 {
-  margin: 0 0 10px 0;
-  font-size: 32px;
-  color: #303133;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.intro-subtitle {
-  margin: 0;
-  font-size: 16px;
-  color: #909399;
-}
-
-.intro-content {
-  margin-top: 20px;
-}
-
-.intro-section h3 {
-  margin: 0 0 10px 0;
-  font-size: 20px;
-  color: #303133;
-}
-
-.intro-section p {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.8;
-  color: #606266;
-}
-
-.feature-box {
-  background: #f5f7fa;
-  padding: 20px;
-  border-radius: 8px;
-  height: 100%;
-}
-
-.feature-box h4 {
-  margin: 0 0 15px 0;
-  font-size: 16px;
-  color: #303133;
-}
-
-.feature-list, .tech-list {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.feature-list li, .tech-list li {
-  margin-bottom: 8px;
-  line-height: 1.6;
-  color: #606266;
-}
-
-.storage-notice {
-  border-radius: 8px;
-}
-
-.notice-content {
-  line-height: 1.6;
-}
-
-.notice-content strong {
-  color: #409eff;
-}
-
-.mt-4 {
+.mt-2 {
   margin-top: 16px;
+}
+
+.mt-3 {
+  margin-top: 24px;
 }
 
 .progress-overview {

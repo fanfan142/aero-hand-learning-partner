@@ -1,20 +1,5 @@
 <template>
   <el-container class="app-container">
-    <!-- 官方项目横幅 -->
-    <div class="official-banner">
-      <el-icon class="banner-icon"><Link /></el-icon>
-      <span class="banner-text">Aero Hand Open 官方项目：</span>
-      <el-link
-        href="https://tetheria.github.io/aero-hand-open/"
-        target="_blank"
-        class="banner-link"
-      >
-        https://tetheria.github.io/aero-hand-open/
-        <el-icon class="el-icon--right"><TopRight /></el-icon>
-      </el-link>
-      <el-tag size="small" type="warning" class="ml-2">必读</el-tag>
-    </div>
-
     <el-header class="app-header">
       <div class="header-left">
         <el-icon class="logo-icon"><MagicStick /></el-icon>
@@ -24,6 +9,15 @@
       <!-- 导航标签 -->
       <div class="header-nav">
         <router-link to="/" custom v-slot="{ navigate, isActive }">
+          <div
+            :class="['nav-item', { active: isActive }]"
+            @click="navigate"
+          >
+            <el-icon><House /></el-icon>
+            首页
+          </div>
+        </router-link>
+        <router-link to="/learning" custom v-slot="{ navigate, isActive }">
           <div
             :class="['nav-item', { active: isActive }]"
             @click="navigate"
@@ -101,7 +95,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useLearningStore } from '@/stores/learning'
-import { Link, TopRight } from '@element-plus/icons-vue'
+import { Link, TopRight, House, MagicStick, Odometer, Reading, Box, Document, Files, DataAnalysis, ChatDotRound } from '@element-plus/icons-vue'
 import AIAssistant from '@/components/ai/AIAssistant.vue'
 
 const learningStore = useLearningStore()
@@ -118,42 +112,6 @@ const showProgress = () => {
 .app-container {
   min-height: 100vh;
   background: #f5f7fa;
-}
-
-.official-banner {
-  background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
-  padding: 12px 30px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.banner-icon {
-  font-size: 20px;
-  color: #b45309;
-}
-
-.banner-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: #92400e;
-}
-
-.banner-link {
-  font-size: 14px;
-  font-weight: 600;
-  color: #b45309;
-  text-decoration: none;
-  transition: all 0.3s;
-}
-
-.banner-link:hover {
-  color: #78350f;
-  text-decoration: underline;
 }
 
 .app-header {
