@@ -145,7 +145,7 @@
         <div class="date-group">
           <h3>📅 2025年12月29日</h3>
           <el-row :gutter="20">
-            <el-col :span="8" v-for="guide in filteredCompleteGuides.filter(g => g.date === '2025-12-29')" :key="guide.id">
+            <el-col :span="8" v-for="guide in guidesByDate['2025-12-29']" :key="guide.id">
               <el-card class="guide-card" @click="loadDocById(guide.docId)">
                 <div class="guide-icon">{{ guide.icon }}</div>
                 <h4>{{ guide.title }}</h4>
@@ -163,7 +163,7 @@
         <div class="date-group mt-4">
           <h3>📅 2025年12月30日</h3>
           <el-row :gutter="20">
-            <el-col :span="8" v-for="guide in filteredCompleteGuides.filter(g => g.date === '2025-12-30')" :key="guide.id">
+            <el-col :span="8" v-for="guide in guidesByDate['2025-12-30']" :key="guide.id">
               <el-card class="guide-card" @click="loadDocById(guide.docId)">
                 <div class="guide-icon">{{ guide.icon }}</div>
                 <h4>{{ guide.title }}</h4>
@@ -323,6 +323,15 @@ const filteredScheme2Modules = computed(() => filterByQuery(scheme2Modules))
 const filteredCompleteGuides = computed(() => filterByQuery(completeGuides))
 const filteredTechnicalTopics = computed(() => filterByQuery(technicalTopics))
 const filteredModuleDocs = computed(() => filterByQuery(moduleDocs))
+const guidesByDate = computed(() => {
+  return filteredCompleteGuides.value.reduce((acc, guide) => {
+    if (!acc[guide.date]) {
+      acc[guide.date] = []
+    }
+    acc[guide.date].push(guide)
+    return acc
+  }, {})
+})
 
 // 计算渲染的Markdown
 const renderedMarkdown = computed(() => {
