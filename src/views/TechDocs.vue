@@ -324,13 +324,17 @@ const filteredCompleteGuides = computed(() => filterByQuery(completeGuides))
 const filteredTechnicalTopics = computed(() => filterByQuery(technicalTopics))
 const filteredModuleDocs = computed(() => filterByQuery(moduleDocs))
 const guidesByDate = computed(() => {
-  return filteredCompleteGuides.value.reduce((acc, guide) => {
+  const grouped = filteredCompleteGuides.value.reduce((acc, guide) => {
     if (!acc[guide.date]) {
       acc[guide.date] = []
     }
     acc[guide.date].push(guide)
     return acc
   }, {})
+  return {
+    '2025-12-29': grouped['2025-12-29'] ?? [],
+    '2025-12-30': grouped['2025-12-30'] ?? []
+  }
 })
 
 // 计算渲染的Markdown
