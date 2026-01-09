@@ -38,7 +38,7 @@
         <el-card class="detail-card" shadow="never">
           <template #header>
             <div class="card-header">
-              <el-icon :color="getNodeColor(selectedNode.category)"><Circle /></el-icon>
+              <el-icon :color="getNodeColor(selectedNode.category)"><CircleCheck /></el-icon>
               <span class="node-name">{{ selectedNode.name }}</span>
             </div>
           </template>
@@ -146,7 +146,7 @@ import {
   InfoFilled,
   RefreshRight,
   VideoPlay,
-  Circle,
+  CircleCheck,
   Reading,
   DocumentCopy,
   CopyDocument,
