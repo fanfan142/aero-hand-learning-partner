@@ -307,8 +307,8 @@ taskkill /PID <进程ID> /F
 
 ## 🆘 获取帮助
 
-- GitHub Issues: [提交问题](https://github.com/tether-ia/aero-hand/issues)
+- GitHub Issues: [提交问题](https://github.com/TetherIA/aero-hand/issues)
 - 官方文档: https://docs.tetheria.ai
-- 项目仓库: https://github.com/tether-ia/aero-hand-open
+- 项目仓库: https://github.com/TetherIA/aero-hand-open
 
 祝学习顺利！ 🎉

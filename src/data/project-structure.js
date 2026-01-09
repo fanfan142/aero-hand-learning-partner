@@ -6,7 +6,7 @@
 export const projectStructure = {
   name: 'Aero Hand Open',
   description: '开源肌腱驱动灵巧机械手项目',
-  repository: 'https://github.com/tether-ia/aero-hand-open',
+  repository: 'https://github.com/TetherIA/aero-hand-open',
 
   // 根目录文件
   rootFiles: [
@@ -15,7 +15,7 @@ export const projectStructure = {
       type: 'documentation',
       description: '项目主要说明文档，介绍项目概述、特性、快速开始方法',
       importance: 'high',
-      link: 'https://github.com/tether-ia/aero-hand-open/blob/main/README.md'
+      link: 'https://github.com/TetherIA/aero-hand-open/blob/main/README.md'
     },
     {
       name: 'LICENSE.md',

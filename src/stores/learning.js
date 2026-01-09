@@ -105,7 +105,7 @@ export const useLearningStore = defineStore('learning', () => {
               '用Arduino IDE打开 firmware/main/firmware_v0.1.0.ino',
               '检查依赖库是否已安装'
             ],
-            commands: ['git clone https://github.com/tether-ia/aero-hand-open.git'],
+            commands: ['git clone https://github.com/TetherIA/aero-hand-open.git'],
             expected: '固件项目在Arduino IDE中正常打开'
           },
           {

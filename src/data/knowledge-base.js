@@ -1087,7 +1087,7 @@ mkdir -p ~/aero_ros_ws/src
 cd ~/aero_ros_ws/src
 
 # 2. 克隆 ROS2 包（假设存在）
-git clone https://github.com/tether-ia/aero-hand-ros2.git
+git clone https://github.com/TetherIA/aero-hand-ros2.git
 
 # 3. 安装依赖
 cd ~/aero_ros_ws

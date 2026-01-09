@@ -339,7 +339,7 @@ aero-hand-learning-partner/
 
 ## 🌟 致谢
 
-- [Aero Hand Open](https://github.com/tether-ia/aero-hand-open) - 原项目
+- [Aero Hand Open](https://github.com/TetherIA/aero-hand-open) - 原项目
 - [Vue.js](https://vuejs.org/) - 渐进式JavaScript框架
 - [Element Plus](https://element-plus.org/) - Vue 3组件库
 - [Vite](https://vitejs.dev/) - 下一代前端构建工具

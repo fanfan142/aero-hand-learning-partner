@@ -25,14 +25,14 @@
           </a>
 
           <a
-            href="https://github.com/tether-ia/aero-hand-open"
+            href="https://github.com/TetherIA/aero-hand-open"
             target="_blank"
             class="official-link"
           >
             <el-icon class="link-icon"><DocumentCopy /></el-icon>
             <div class="link-content">
               <div class="link-title">💾 源代码仓库</div>
-              <div class="link-url">github.com/tether-ia/aero-hand-open</div>
+              <div class="link-url">github.com/TetherIA/aero-hand-open</div>
             </div>
             <el-icon class="external-icon"><TopRight /></el-icon>
           </a>

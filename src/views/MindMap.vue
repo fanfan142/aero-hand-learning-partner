@@ -38,7 +38,7 @@
         <el-card class="detail-card" shadow="never">
           <template #header>
             <div class="card-header">
-              <el-icon :color="getNodeColor(selectedNode.category)"><CircleFilled /></el-icon>
+              <el-icon :color="getNodeColor(selectedNode.category)"><Circle /></el-icon>
               <span class="node-name">{{ selectedNode.name }}</span>
             </div>
           </template>
@@ -146,7 +146,7 @@ import {
   InfoFilled,
   RefreshRight,
   VideoPlay,
-  CircleFilled,
+  Circle,
   Reading,
   DocumentCopy,
   CopyDocument,
@@ -177,7 +177,7 @@ const knowledgeGraph = {
       related: ['hardware', 'firmware', 'sdk', 'simulation', 'ros2', 'rl'],
       resources: [
         { title: '官方文档', url: 'https://tetheria.github.io/aero-hand-open/' },
-        { title: 'GitHub仓库', url: 'https://github.com/tether-ia/aero-hand-open' }
+        { title: 'GitHub仓库', url: 'https://github.com/TetherIA/aero-hand-open' }
       ]
     },
     // 硬件
