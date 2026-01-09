@@ -4,15 +4,23 @@
 
 [![Live Demo](https://img.shields.io/badge/🌐-在线访问-brightgreen)](https://aero-hand-learning-partner.vercel.app)
 [![GitHub](https://img.shields.io/badge/源码-GitHub-blue)](https://github.com/fanfan142/aero-hand-learning-partner)
+[![Version](https://img.shields.io/badge/版本-v1.1.0-success)](https://github.com/fanfan142/aero-hand-learning-partner)
 
 ---
 
 ## ✨ 功能特性
 
+### 🏠 独立首页 (v1.1.0新增)
+- **官方项目链接** - 最显眼位置展示官方文档和GitHub仓库
+- **功能介绍** - 清晰展示网站的核心功能和技术栈
+- **学习路线预览** - 8个阶段快速预览
+- **快速开始指南** - 新手友好的入门指引
+
 ### 📚 个性化学习系统
-- **学习进度追踪** - 可视化显示当前学习阶段和完成度
-- **任务清单** - 每个阶段细分具体任务，支持勾选完成
+- **学习进度追踪** - 从0%开始的进度可视化
+- **任务清单** - 43个详细任务，支持勾选/取消勾选
 - **自由导航** - 可以自由回顾已学内容或预览未来内容
+- **详细步骤** - 每个任务包含操作步骤、命令、预期结果
 
 ### 📖 完整知识库
 - **官方文档翻译** - Aero Hand项目的中文文档
@@ -82,51 +90,87 @@ npm run preview
 
 ---
 
+## 📖 更新日志
+
+### v1.1.0 (2024-01-09) - 重大功能更新
+- ✨ 新增独立首页组件，展示官方项目链接和功能介绍
+- 🔧 路由重构：`/` → 首页，`/learning` → 学习进度
+- 🐛 修复学习进度从非0%开始的bug
+- ✨ 任务支持取消勾选
+- 📝 任务列表从22个扩展到43个详细任务
+- 📝 每个任务新增：操作步骤、可执行命令、预期结果
+
+### v1.0.0 (2024-01-08) - 首次发布
+- 🎉 8阶段学习路线（硬件、固件、舵机、SDK、仿真、ROS2、RL、Sim2Real）
+- 📚 完整知识库
+- 🧠 AI学习助手
+- 📦 硬件清单
+- 📁 项目结构详解
+
+---
+
 ## 📖 学习路线
 
-本项目将学习过程分为 **8个阶段**：
+本项目将学习过程分为 **8个阶段，共43个详细任务**：
 
-### 1️⃣ 硬件准备
+### 1️⃣ 硬件准备 (4任务)
 - 购买电子元件（ESP32-S3、HLS3606M舵机等）
 - 3D打印零件
-- 机械装配
+- 机械组装
+- 电气连接
 
-### 2️⃣ 固件烧录
-- 安装Arduino开发环境
-- 编译并上传ESP32固件
+### 2️⃣ 固件烧录 (5任务)
+- 安装Arduino IDE
+- 打开固件项目
+- 配置固件参数
+- 编译并烧录固件
 - 测试串口通信
 
-### 3️⃣ 舵机配置
+### 3️⃣ 舵机配置 (5任务)
 - 理解舵机控制原理
-- 配置端点（grasp_count/extend_count）
+- 安装Python SDK
+- 配置单个舵机端点
+- 配置所有舵机
 - 测试SDK控制
 
-### 4️⃣ SDK使用
-- 安装Python SDK
-- 运行示例程序
-- 开发自定义控制
+### 4️⃣ SDK使用 (4任务)
+- 理解代码架构
+- 探索官方示例代码
+- 运行示例脚本
+- 编写自定义控制脚本
 
-### 5️⃣ MuJoCo仿真
-- 安装MuJoCo和MJX
+### 5️⃣ MuJoCo仿真 (6任务)
+- 理解MuJoCo基础
+- 理解XML模型
+- 安装MuJoCo环境
 - 加载仿真模型
-- 运行物理仿真
+- 实时控制仿真
+- 测试预训练策略
 
-### 6️⃣ ROS2集成
-- 安装ROS2 Humble
-- 配置工作空间
-- 运行遥操作节点
+### 6️⃣ ROS2集成 (4任务)
+- 理解ROS2作用
+- 搭建ROS2环境
+- 运行示例节点
+- 理解话题消息
 
-### 7️⃣ RL训练
+### 7️⃣ RL训练 (8任务)
+- 理解强化学习基础
 - 理解PPO算法
-- 配置训练环境
-- 运行强化学习训练
-- 监控训练进度
+- 探索训练代码
+- 配置训练参数
+- 配置监控工具（wandb）
+- 运行训练
+- 监控和分析训练
+- 评估训练策略
 
-### 8️⃣ Sim2Real
-- 理解域随机化
-- 训练鲁棒策略
-- 部署到实物
+### 8️⃣ Sim2Real (7任务)
+- 理解Sim2Real挑战
+- 理解完整流程
+- 导出策略模型
+- 策略部署（SDK方式）
+- 策略部署（ROS2方式）
 - 调试和优化
+- 记录结果
 
 ---
 
@@ -184,11 +228,12 @@ npm run preview
 aero-hand-learning-partner/
 ├── src/
 │   ├── views/           # 页面组件
-│   │   ├── Home.vue              # 学习进度主页
-│   │   ├── KnowledgeBase.vue    # 知识库
-│   │   ├── HardwareChecklist.vue # 硬件清单
-│   │   ├── OfficialDocs.vue      # 官方文档
-│   │   └── ProjectStructure.vue  # 项目结构
+│   │   ├── Welcome.vue            # 首页 (v1.1.0新增)
+│   │   ├── Home.vue               # 学习进度主页
+│   │   ├── KnowledgeBase.vue      # 知识库
+│   │   ├── HardwareChecklist.vue  # 硬件清单
+│   │   ├── OfficialDocs.vue       # 官方文档
+│   │   └── ProjectStructure.vue   # 项目结构
 │   ├── components/
 │   │   └── ai/
 │   │       └── AIAssistant.vue   # AI助手组件
