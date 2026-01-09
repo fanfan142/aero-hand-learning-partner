@@ -20,14 +20,12 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
-    host: true // 允许局域网访问
+    host: true
   },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    // 使用 esbuild 压缩（Vite默认，更快）
-    minify: 'esbuild',
     target: 'es2015',
     rollupOptions: {
       output: {
