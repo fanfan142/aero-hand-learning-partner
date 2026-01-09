@@ -152,17 +152,6 @@ export const useLearningStore = defineStore('learning', () => {
           { id: 'deploy-ros2', title: '策略部署（ROS2方式）', description: '通过ROS2节点部署' },
           { id: 'debug-optimize', title: '调试和优化', description: '处理Sim2Real差距' }
         ]
-      },
-      {
-        id: 'migration',
-        title: '迁移到自己的手',
-        icon: 'Operation',
-        completed: false,
-        tasks: [
-          { id: 'create-model', title: '建立MuJoCo模型', description: '从URDF到XML，添加肌腱配置' },
-          { id: 'design-task', title: '设计RL任务', description: '拧螺丝的任务和奖励函数' },
-          { id: 'implement-interface', title: '实现控制接口', description: 'CANFD+FOC与仿真策略的对接' }
-        ]
       }
     ]
   })
