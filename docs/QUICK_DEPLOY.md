@@ -83,4 +83,4 @@ const base = '/aero-hand-learning-partner/'
 
 ## 📚 详细文档
 
-查看 `DEPLOYMENT_GUIDE.md` 获取更多部署选项。
+查看 `docs/DEPLOYMENT_GUIDE.md` 获取更多部署选项。

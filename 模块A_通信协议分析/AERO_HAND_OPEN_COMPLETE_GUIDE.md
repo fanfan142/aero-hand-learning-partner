@@ -78,7 +78,11 @@ F:\sim\aero\aero-hand-open/
 │   └── simulation/           # 仿真模型（子模块）
 ├── CONTRIBUTING.md           # 贡献指南
 ├── LICENSE.md                # 许可证说明
-├── README.md                 # 主README
+├── docs/                     # 项目文档
+│   ├── README.md             # 主README
+│   ├── DEPLOYMENT_GUIDE.md   # 部署指南
+│   ├── QUICK_DEPLOY.md       # 快速部署
+│   └── START_GUIDE.md        # 快速开始
 ├── .gitignore
 └── .gitmodules              # Git子模块配置
 ```

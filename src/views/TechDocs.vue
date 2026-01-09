@@ -286,7 +286,7 @@ const learningPathDocs = [
     description: '30-40小时快速掌握基础操作',
     duration: '30-40h',
     level: '初级',
-    path: '/learning/scheme2/README.md'
+    path: '/docs/README.md'
   },
   {
     id: 'path2',
@@ -295,7 +295,7 @@ const learningPathDocs = [
     description: '50-75小时全面学习技术栈',
     duration: '50-75h',
     level: '中级',
-    path: '/learning/scheme2/README.md'
+    path: '/docs/README.md'
   },
   {
     id: 'path3',
@@ -304,7 +304,7 @@ const learningPathDocs = [
     description: '80-120小时成为领域专家',
     duration: '80-120h',
     level: '高级',
-    path: '/learning/scheme2/README.md'
+    path: '/docs/README.md'
   }
 ]
 
