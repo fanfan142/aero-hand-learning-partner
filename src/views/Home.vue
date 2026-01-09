@@ -373,7 +373,9 @@ const copyCommand = (cmd) => {
   align-items: center;
   margin: 8px 0;
   padding: 8px;
-  background: #1e1e1e;
+  background: #e6f3ff;
+  border: 1px solid #b3d9ff;
   border-radius: 4px;
+  color: #1a1a1a;
 }
 </style>

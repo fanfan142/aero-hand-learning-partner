@@ -62,6 +62,24 @@
             项目结构
           </div>
         </router-link>
+        <router-link to="/mindmap" custom v-slot="{ navigate, isActive }">
+          <div
+            :class="['nav-item', { active: isActive }]"
+            @click="navigate"
+          >
+            <el-icon><Share /></el-icon>
+            知识图谱
+          </div>
+        </router-link>
+        <router-link to="/techdocs" custom v-slot="{ navigate, isActive }">
+          <div
+            :class="['nav-item', { active: isActive }]"
+            @click="navigate"
+          >
+            <el-icon><Notebook /></el-icon>
+            技术文档
+          </div>
+        </router-link>
       </div>
 
       <div class="header-right">
@@ -95,7 +113,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useLearningStore } from '@/stores/learning'
-import { Link, TopRight, House, MagicStick, Odometer, Reading, Box, Document, Files, DataAnalysis, ChatDotRound } from '@element-plus/icons-vue'
+import { Link, TopRight, House, MagicStick, Odometer, Reading, Box, Document, Files, Share, Notebook, DataAnalysis, ChatDotRound } from '@element-plus/icons-vue'
 import AIAssistant from '@/components/ai/AIAssistant.vue'
 
 const learningStore = useLearningStore()

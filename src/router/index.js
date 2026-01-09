@@ -5,6 +5,8 @@ import KnowledgeBase from '@/views/KnowledgeBase.vue'
 import HardwareChecklist from '@/views/HardwareChecklist.vue'
 import OfficialDocs from '@/views/OfficialDocs.vue'
 import ProjectStructure from '@/views/ProjectStructure.vue'
+import MindMap from '@/views/MindMap.vue'
+import TechDocs from '@/views/TechDocs.vue'
 
 const routes = [
   {
@@ -42,6 +44,18 @@ const routes = [
     name: 'ProjectStructure',
     component: ProjectStructure,
     meta: { title: '项目结构' }
+  },
+  {
+    path: '/mindmap',
+    name: 'MindMap',
+    component: MindMap,
+    meta: { title: '知识图谱' }
+  },
+  {
+    path: '/techdocs',
+    name: 'TechDocs',
+    component: TechDocs,
+    meta: { title: '技术文档' }
   }
 ]
 

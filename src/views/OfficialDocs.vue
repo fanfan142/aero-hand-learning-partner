@@ -148,10 +148,11 @@ const handleTabClick = () => {
 }
 
 .markdown-body :deep(pre) {
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: #e6f3ff;
+  color: #1a1a1a;
   padding: 16px;
   border-radius: 8px;
+  border: 1px solid #b3d9ff;
   overflow-x: auto;
   margin: 1.5em 0;
   line-height: 1.6;
