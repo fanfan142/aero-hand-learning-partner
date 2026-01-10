@@ -386,7 +386,7 @@ const scheme2Modules = [
     duration: '8-12小时',
     prerequisites: '基础编程',
     files: 'firmware/main/, sdk/src/aero_open_sdk/aero_hand.py',
-    path: '/learning/scheme2/模块A_通信协议分析/通信协议分析指南.md'
+    path: '/模块A_通信协议分析/通信协议分析指南.md'
   },
   {
     id: 'mb',
@@ -396,7 +396,7 @@ const scheme2Modules = [
     duration: '10-15小时',
     prerequisites: '模块A，基础线性代数',
     files: 'sdk/src/aero_open_sdk/joints_to_actuations.py',
-    path: '/learning/scheme2/模块B_运动学控制/运动学控制指南.md'
+    path: '/模块B_运动学控制/运动学控制指南.md'
   },
   {
     id: 'mc',
@@ -406,7 +406,7 @@ const scheme2Modules = [
     duration: '12-18小时',
     prerequisites: '模块A和B，基础电子知识',
     files: 'ros2/, 系统配置',
-    path: '/learning/scheme2/模块C_系统集成/系统集成指南.md'
+    path: '/模块C_系统集成/系统集成指南.md'
   },
   {
     id: 'md',
@@ -416,7 +416,7 @@ const scheme2Modules = [
     duration: '20-30小时',
     prerequisites: '模块A、B、C，Python中级',
     files: 'ROS2遥操作, 仿真环境, 训练脚本',
-    path: '/learning/scheme2/模块D_高级应用/高级应用指南.md'
+    path: '/模块D_高级应用/高级应用指南.md'
   }
 ]
 
@@ -428,7 +428,7 @@ const completeGuides = [
     description: '63KB · 从零开始的完整实现文档',
     module: '整体',
     date: '2025-12-29',
-    path: '/AERO_HAND_COMPLETE_IMPLEMENTATION_GUIDE.md'
+    path: '/模块A_通信协议分析/AERO_HAND_COMPLETE_IMPLEMENTATION_GUIDE.md'
   },
   {
     id: 'cg2',
@@ -437,7 +437,7 @@ const completeGuides = [
     description: '32KB · 项目实现总结文档',
     module: '整体',
     date: '2025-12-29',
-    path: '/AERO_HAND_IMPLEMENTATION_SUMMARY.md'
+    path: '/模块A_通信协议分析/AERO_HAND_IMPLEMENTATION_SUMMARY.md'
   },
   {
     id: 'cg3',
@@ -446,7 +446,7 @@ const completeGuides = [
     description: '81KB · 强化学习Sim2Real技术详解',
     module: '仿真',
     date: '2025-12-29',
-    path: '/AERO_HAND_RL_SIM2REAL_TECHNICAL.md'
+    path: '/模块A_通信协议分析/AERO_HAND_RL_SIM2REAL_TECHNICAL.md'
   },
   {
     id: 'cg4',
@@ -455,7 +455,7 @@ const completeGuides = [
     description: '31KB · 仿真到实物转移实战',
     module: '高级',
     date: '2025-12-30',
-    path: '/AERO_HAND_SIM2REAL_PRACTICAL_GUIDE.md'
+    path: '/模块A_通信协议分析/AERO_HAND_SIM2REAL_PRACTICAL_GUIDE.md'
   },
   {
     id: 'cg5',
@@ -464,7 +464,7 @@ const completeGuides = [
     description: '29KB · 参数配置详细说明',
     module: '高级',
     date: '2025-12-30',
-    path: '/AERO_HAND_SIM2REAL_PARAMETERS_REFERENCE.md'
+    path: '/模块A_通信协议分析/AERO_HAND_SIM2REAL_PARAMETERS_REFERENCE.md'
   },
   {
     id: 'cg6',
@@ -473,7 +473,7 @@ const completeGuides = [
     description: '48KB · 完整技术栈总结',
     module: '整体',
     date: '2025-12-30',
-    path: '/AERO_HAND_TECHNICAL_STACK_SUMMARY.md'
+    path: '/模块A_通信协议分析/AERO_HAND_TECHNICAL_STACK_SUMMARY.md'
   }
 ]
 
@@ -483,28 +483,28 @@ const technicalTopics = [
     title: '通信协议深度解析',
     description: '16字节协议的详细分析和实现',
     date: '2025-12-17',
-    path: '/learning/scheme2/模块A_通信协议分析/通信协议分析指南.md'
+    path: '/模块A_通信协议分析/通信协议分析指南.md'
   },
   {
     id: 'tt2',
     title: '肌腱驱动运动学',
     description: '理解肌腱驱动的数学模型',
     date: '2025-12-17',
-    path: '/learning/scheme2/模块B_运动学控制/运动学控制指南.md'
+    path: '/模块B_运动学控制/运动学控制指南.md'
   },
   {
     id: 'tt3',
     title: 'ROS2集成架构',
     description: 'ROS2节点设计和通信模式',
     date: '2025-12-17',
-    path: '/learning/scheme2/模块C_系统集成/系统集成指南.md'
+    path: '/模块C_系统集成/系统集成指南.md'
   },
   {
     id: 'tt4',
     title: '强化学习实战',
     description: 'PPO算法在Aero Hand上的应用',
     date: '2025-12-17',
-    path: '/learning/scheme2/模块D_高级应用/高级应用指南.md'
+    path: '/模块D_高级应用/高级应用指南.md'
   }
 ]
 
