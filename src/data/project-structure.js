@@ -11,11 +11,11 @@ export const projectStructure = {
   // 根目录文件
   rootFiles: [
     {
-      name: 'README.md',
+      name: 'docs/README.md',
       type: 'documentation',
       description: '项目主要说明文档，介绍项目概述、特性、快速开始方法',
       importance: 'high',
-      link: 'https://github.com/TetherIA/aero-hand-open/blob/main/README.md'
+      link: 'https://github.com/TetherIA/aero-hand-open/blob/main/docs/README.md'
     },
     {
       name: 'LICENSE.md',
