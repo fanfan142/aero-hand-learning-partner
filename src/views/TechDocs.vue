@@ -35,6 +35,14 @@
           </el-select>
         </el-col>
       </el-row>
+
+      <div v-if="normalizedQuery" class="search-summary">
+        <div class="summary-left">
+          <el-icon><Search /></el-icon>
+          <span>已搜索 “{{ searchQuery }}”，共找到 {{ totalMatches }} 条结果</span>
+        </div>
+        <el-button text type="primary" @click="clearSearch">清除搜索</el-button>
+      </div>
     </div>
 
     <!-- 文档分类 -->
@@ -44,8 +52,8 @@
         <h2>🎯 学习路径方案</h2>
         <p class="section-desc">系统性学习路线，从基础到高级的完整学习计划</p>
 
-        <el-row :gutter="20">
-          <el-col :span="8" v-for="doc in learningPathDocs" :key="doc.id">
+        <el-row v-if="filteredLearningPathDocs.length" :gutter="20">
+          <el-col :span="8" v-for="doc in filteredLearningPathDocs" :key="doc.id">
             <el-card class="doc-card" @click="openDoc(doc)">
               <div class="doc-icon">{{ doc.icon }}</div>
               <h3>{{ doc.title }}</h3>
@@ -57,13 +65,14 @@
             </el-card>
           </el-col>
         </el-row>
+        <el-empty v-else description="暂无匹配的学习路径" />
 
         <!-- Scheme 1 详细模块 -->
         <div class="scheme-modules mt-4">
           <h3>📖 方案一：分层学习（6个阶段）</h3>
-          <el-collapse v-model="activeScheme1">
+          <el-collapse v-if="filteredScheme1Modules.length" v-model="activeScheme1">
             <el-collapse-item
-              v-for="module in scheme1Modules"
+              v-for="module in filteredScheme1Modules"
               :key="module.id"
               :name="module.id"
             >
@@ -94,6 +103,7 @@
               </div>
             </el-collapse-item>
           </el-collapse>
+          <el-empty v-else description="暂无匹配的分层学习模块" />
         </div>
       </div>
 
@@ -102,8 +112,8 @@
         <h2>🔧 模块化学习方案</h2>
         <p class="section-desc">按技术模块分类，专注学习特定技术领域</p>
 
-        <el-row :gutter="20">
-          <el-col :span="12" v-for="module in scheme2Modules" :key="module.id">
+        <el-row v-if="filteredScheme2Modules.length" :gutter="20">
+          <el-col :span="12" v-for="module in filteredScheme2Modules" :key="module.id">
             <el-card class="module-card">
               <div class="module-header">
                 <div class="module-badge">{{ module.letter }}</div>
@@ -134,6 +144,7 @@
             </el-card>
           </el-col>
         </el-row>
+        <el-empty v-else description="暂无匹配的模块化学习内容" />
       </div>
 
       <!-- 完整指南 -->
@@ -144,8 +155,8 @@
         <!-- 12月29日文档 -->
         <div class="date-group">
           <h3>📅 2025年12月29日</h3>
-          <el-row :gutter="20">
-            <el-col :span="8" v-for="guide in completeGuides.filter(g => g.date === '2025-12-29')" :key="guide.id">
+          <el-row v-if="filteredCompleteGuides_1229.length" :gutter="20">
+            <el-col :span="8" v-for="guide in filteredCompleteGuides_1229" :key="guide.id">
               <el-card class="guide-card" @click="loadMarkdownDoc(guide.path)">
                 <div class="guide-icon">{{ guide.icon }}</div>
                 <h4>{{ guide.title }}</h4>
@@ -157,13 +168,14 @@
               </el-card>
             </el-col>
           </el-row>
+          <el-empty v-else description="暂无匹配的 12-29 文档" />
         </div>
 
         <!-- 12月30日文档 -->
         <div class="date-group mt-4">
           <h3>📅 2025年12月30日</h3>
-          <el-row :gutter="20">
-            <el-col :span="8" v-for="guide in completeGuides.filter(g => g.date === '2025-12-30')" :key="guide.id">
+          <el-row v-if="filteredCompleteGuides_1230.length" :gutter="20">
+            <el-col :span="8" v-for="guide in filteredCompleteGuides_1230" :key="guide.id">
               <el-card class="guide-card" @click="loadMarkdownDoc(guide.path)">
                 <div class="guide-icon">{{ guide.icon }}</div>
                 <h4>{{ guide.title }}</h4>
@@ -175,6 +187,7 @@
               </el-card>
             </el-col>
           </el-row>
+          <el-empty v-else description="暂无匹配的 12-30 文档" />
         </div>
       </div>
 
@@ -183,9 +196,9 @@
         <h2>🔬 技术专题</h2>
         <p class="section-desc">深入探讨特定技术主题</p>
 
-        <el-timeline>
+        <el-timeline v-if="filteredTechnicalTopics.length">
           <el-timeline-item
-            v-for="topic in technicalTopics"
+            v-for="topic in filteredTechnicalTopics"
             :key="topic.id"
             :timestamp="topic.date"
             placement="top"
@@ -203,6 +216,7 @@
             </el-card>
           </el-timeline-item>
         </el-timeline>
+        <el-empty v-else description="暂无匹配的技术专题" />
       </div>
 
       <!-- 模块文档 -->
@@ -210,8 +224,8 @@
         <h2>📁 模块文档</h2>
         <p class="section-desc">各模块的AI上下文文档</p>
 
-        <el-row :gutter="20">
-          <el-col :span="8" v-for="mod in moduleDocs" :key="mod.id">
+        <el-row v-if="filteredModuleDocs.length" :gutter="20">
+          <el-col :span="8" v-for="mod in filteredModuleDocs" :key="mod.id">
             <el-card class="mod-doc-card" @click="loadMarkdownDoc(mod.path)">
               <div class="mod-doc-icon">{{ mod.icon }}</div>
               <h4>{{ mod.name }}</h4>
@@ -223,6 +237,7 @@
             </el-card>
           </el-col>
         </el-row>
+        <el-empty v-else description="暂无匹配的模块文档" />
       </div>
     </div>
 
@@ -250,7 +265,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import {
   Search,
   Document,
@@ -276,6 +291,8 @@ const md = new MarkdownIt({
   linkify: true,
   typographer: true
 })
+
+const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase())
 
 // 文档数据
 const learningPathDocs = [
@@ -565,6 +582,54 @@ const moduleDocs = [
   }
 ]
 
+function matchesQuery(...fields) {
+  if (!normalizedQuery.value) return true
+  return fields
+    .filter(Boolean)
+    .some(field => String(field).toLowerCase().includes(normalizedQuery.value))
+}
+
+function filterDocs(list, extraFields = () => []) {
+  return list.filter(item => matchesQuery(
+    item.title,
+    item.name,
+    item.description,
+    item.module,
+    item.level,
+    item.duration,
+    item.files,
+    item.fileCount,
+    item.coverage,
+    item.path,
+    ...extraFields(item)
+  ))
+}
+
+const filteredLearningPathDocs = computed(() => filterDocs(learningPathDocs))
+const filteredScheme1Modules = computed(() => filterDocs(scheme1Modules, module => [
+  module.tag,
+  module.files?.join(' ')
+]))
+const filteredScheme2Modules = computed(() => filterDocs(scheme2Modules))
+const filteredCompleteGuides = computed(() => filterDocs(completeGuides))
+const filteredCompleteGuides_1229 = computed(() => (
+  filteredCompleteGuides.value.filter(guide => guide.date === '2025-12-29')
+))
+const filteredCompleteGuides_1230 = computed(() => (
+  filteredCompleteGuides.value.filter(guide => guide.date === '2025-12-30')
+))
+const filteredTechnicalTopics = computed(() => filterDocs(technicalTopics))
+const filteredModuleDocs = computed(() => filterDocs(moduleDocs))
+
+const totalMatches = computed(() => (
+  filteredLearningPathDocs.value.length +
+  filteredScheme1Modules.value.length +
+  filteredScheme2Modules.value.length +
+  filteredCompleteGuides.value.length +
+  filteredTechnicalTopics.value.length +
+  filteredModuleDocs.value.length
+))
+
 // 计算渲染的Markdown
 const renderedMarkdown = computed(() => {
   if (!currentDocContent.value) return ''
@@ -574,6 +639,10 @@ const renderedMarkdown = computed(() => {
 // 打开文档
 function openDoc(doc) {
   loadMarkdownDoc(doc.path)
+}
+
+function clearSearch() {
+  searchQuery.value = ''
 }
 
 // 加载Markdown文档
@@ -642,6 +711,24 @@ async function loadMarkdownDoc(path) {
 
 .mt-3 {
   margin-top: 16px;
+}
+
+.search-summary {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #f5f7fa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #606266;
+  font-size: 14px;
+}
+
+.summary-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .doc-section {

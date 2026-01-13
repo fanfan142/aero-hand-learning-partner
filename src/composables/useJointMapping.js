@@ -209,12 +209,20 @@ export function useJointMapping(jointId) {
  */
 export function useMultiJointMapping(jointIds = []) {
   const jointStates = ref({})
+  const activeJointIds = ref([...jointIds])
 
   // 初始化每个关节的状态
-  function initializeJoints() {
-    jointIds.forEach(id => {
-      jointStates.value[id] = useJointMapping(id)
+  function initializeJoints(ids = activeJointIds.value) {
+    ids.forEach(id => {
+      if (!jointStates.value[id]) {
+        jointStates.value[id] = useJointMapping(id)
+      }
     })
+  }
+
+  function syncJointIds(ids = []) {
+    activeJointIds.value = [...ids]
+    initializeJoints(ids)
   }
 
   /**
@@ -234,7 +242,7 @@ export function useMultiJointMapping(jointIds = []) {
    * @param {Array} positions - 位置百分比数组
    */
   function applyPreset(positions) {
-    jointIds.forEach((id, index) => {
+    activeJointIds.value.forEach((id, index) => {
       if (positions[index] !== undefined && jointStates.value[id]) {
         jointStates.value[id].setPosition(positions[index])
       }
@@ -256,10 +264,10 @@ export function useMultiJointMapping(jointIds = []) {
    * 获取状态数组（用于图表）
    */
   function getStatesArray() {
-    return Object.entries(jointStates.value).map(([id, mapping]) => ({
-      jointId: parseInt(id),
-      ...mapping.getStateSummary()
-    }))
+    return activeJointIds.value.map(id => ({
+      jointId: id,
+      ...jointStates.value[id]?.getStateSummary()
+    })).filter(state => state.jointId !== undefined)
   }
 
   // 初始化
@@ -267,6 +275,7 @@ export function useMultiJointMapping(jointIds = []) {
 
   return {
     jointStates,
+    syncJointIds,
     setMultiplePositions,
     applyPreset,
     getAllStates,

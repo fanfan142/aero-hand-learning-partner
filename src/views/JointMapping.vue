@@ -13,8 +13,13 @@
           <template #header>
             <div class="card-header">
               <span>关节选择</span>
-              <el-button text type="primary" @click="selectAll">全选</el-button>
-              <el-button text @click="clearAll">清空</el-button>
+              <div class="header-actions">
+                <el-button text type="primary" @click="selectAll">全选</el-button>
+                <el-button text @click="selectFingers">四指</el-button>
+                <el-button text @click="selectThumb">拇指</el-button>
+                <el-button text @click="selectWrist">手腕</el-button>
+                <el-button text @click="clearAll">清空</el-button>
+              </div>
             </div>
           </template>
 
@@ -30,6 +35,19 @@
                 </el-checkbox>
               </div>
             </el-checkbox-group>
+          </div>
+
+          <div class="selection-summary">
+            <div class="summary-row">
+              <span>已选 {{ selectedJoints.length }} / {{ jointDefinitions.length }} 个关节</span>
+              <el-tag v-if="outOfRangeJoints.length" type="danger" size="small">
+                存在 {{ outOfRangeJoints.length }} 个超限
+              </el-tag>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">平均位置</span>
+              <span class="summary-value">{{ averagePosition }}%</span>
+            </div>
           </div>
         </el-card>
 
@@ -93,9 +111,19 @@
             <!-- 映射层 -->
             <div class="data-layer mapping-layer">
               <div class="layer-title">映射层</div>
-              <div class="layer-content">
+              <div v-if="selectedJoints.length" class="layer-content">
                 <div v-for="jointId in selectedJoints" :key="jointId" class="joint-data">
-                  <div class="joint-name">{{ getJointName(jointId) }}</div>
+                  <div class="joint-name">
+                    {{ getJointName(jointId) }}
+                    <el-tag
+                      v-if="getJointData(jointId).isOutOfRange"
+                      type="danger"
+                      size="small"
+                      class="warning-tag"
+                    >
+                      超限
+                    </el-tag>
+                  </div>
                   <div class="data-rows">
                     <div class="data-row">
                       <span class="data-label">关节角度:</span>
@@ -109,16 +137,21 @@
                       <span class="data-label">脉冲数量:</span>
                       <span class="data-value">{{ getJointData(jointId).pulse }}</span>
                     </div>
+                    <div v-if="getJointData(jointId).warning" class="data-row warning-row">
+                      <span class="data-label">提示:</span>
+                      <span class="data-value warning-text">{{ getJointData(jointId).warning }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
+              <el-empty v-else description="请选择关节查看映射" />
             </div>
 
             <!-- 配置层 -->
             <div class="data-layer config-layer">
               <div class="layer-title">配置层</div>
-              <div class="layer-content">
-                <div v-for="jointId in selectedJoints.slice(0, 2)" :key="`config-${jointId}`" class="config-data">
+              <div v-if="selectedJoints.length" class="layer-content config-grid">
+                <div v-for="jointId in selectedJoints" :key="`config-${jointId}`" class="config-data">
                   <div class="config-title">{{ getJointName(jointId) }} 配置</div>
                   <div class="data-row">
                     <span class="data-label">extend_count:</span>
@@ -129,11 +162,20 @@
                     <span class="data-value">{{ getJointConfig(jointId).graspCount }}</span>
                   </div>
                   <div class="data-row">
+                    <span class="data-label">最大角度:</span>
+                    <span class="data-value">{{ getJointConfig(jointId).maxAngle }}°</span>
+                  </div>
+                  <div class="data-row">
+                    <span class="data-label">齿轮比:</span>
+                    <span class="data-value">{{ getJointConfig(jointId).gearRatio }}</span>
+                  </div>
+                  <div class="data-row">
                     <span class="data-label">当前脉冲:</span>
                     <span class="data-value">{{ getJointData(jointId).pulse }}</span>
                   </div>
                 </div>
               </div>
+              <el-empty v-else description="请选择关节查看配置" />
             </div>
           </div>
         </el-card>
@@ -188,7 +230,13 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { Download, Upload, Refresh } from '@element-plus/icons-vue'
-import { jointDefinitions, presetActions } from '@/data/joint-mappings.js'
+import {
+  jointDefinitions,
+  presetActions,
+  getAllJointIds,
+  getFingerJointIds,
+  getThumbJointIds
+} from '@/data/joint-mappings.js'
 import { useMultiJointMapping } from '@/composables/useJointMapping.js'
 import { useConfigStore } from '@/stores/config.js'
 import { exportAsJSON, importFromJSON } from '@/utils/export.js'
@@ -201,8 +249,11 @@ const selectedJoints = ref([0, 1, 2, 3, 4, 5, 6]) // 默认选择四指
 const positionPercent = ref(0)
 
 // 多关节映射
-const { jointStates, setMultiplePositions, applyPreset: applyPresetToJoints, getStatesArray } =
-  useMultiJointMapping(selectedJoints.value)
+const {
+  jointStates,
+  syncJointIds,
+  getStatesArray
+} = useMultiJointMapping(selectedJoints.value)
 
 // 图表引用
 const comparisonChartRef = ref(null)
@@ -228,6 +279,19 @@ function getJointConfig(jointId) {
   return configStore.getJointConfig(jointId) || {}
 }
 
+const averagePosition = computed(() => {
+  if (!selectedJoints.value.length) return 0
+  const total = selectedJoints.value.reduce((sum, jointId) => {
+    const position = jointStates.value[jointId]?.positionPercent?.value ?? 0
+    return sum + position
+  }, 0)
+  return Math.round((total / selectedJoints.value.length) * 100)
+})
+
+const outOfRangeJoints = computed(() => (
+  selectedJoints.value.filter(jointId => jointStates.value[jointId]?.isOutOfRange?.value)
+))
+
 // ========== 方法 ==========
 
 function formatTooltip(value) {
@@ -241,7 +305,19 @@ function getProgressColor(percent) {
 }
 
 function selectAll() {
-  selectedJoints.value = jointDefinitions.map(j => j.id)
+  selectedJoints.value = getAllJointIds()
+}
+
+function selectFingers() {
+  selectedJoints.value = getFingerJointIds()
+}
+
+function selectThumb() {
+  selectedJoints.value = getThumbJointIds()
+}
+
+function selectWrist() {
+  selectedJoints.value = [6]
 }
 
 function clearAll() {
@@ -445,6 +521,7 @@ onUnmounted(() => {
 
 // 监听选中关节变化
 watch(selectedJoints, () => {
+  syncJointIds(selectedJoints.value)
   updateCharts()
 }, { deep: true })
 </script>
@@ -480,6 +557,13 @@ watch(selectedJoints, () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .joint-selector {
@@ -513,6 +597,34 @@ watch(selectedJoints, () => {
 
 .position-control-card {
   margin-top: auto;
+}
+
+.selection-summary {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-label {
+  font-weight: 600;
+}
+
+.summary-value {
+  color: #409EFF;
+  font-weight: 600;
 }
 
 .position-control {
@@ -589,6 +701,9 @@ watch(selectedJoints, () => {
   font-weight: 600;
   margin-bottom: 8px;
   color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .data-rows {
@@ -601,6 +716,22 @@ watch(selectedJoints, () => {
   display: flex;
   justify-content: space-between;
   font-size: 13px;
+}
+
+.warning-row .data-label,
+.warning-text {
+  color: #F56C6C;
+  font-weight: 600;
+}
+
+.warning-tag {
+  margin-left: auto;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
 }
 
 .config-data {
