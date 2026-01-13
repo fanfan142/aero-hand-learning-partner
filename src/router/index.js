@@ -7,6 +7,8 @@ import OfficialDocs from '@/views/OfficialDocs.vue'
 import ProjectStructure from '@/views/ProjectStructure.vue'
 import MindMap from '@/views/MindMap.vue'
 import TechDocs from '@/views/TechDocs.vue'
+import JointMapping from '@/views/JointMapping.vue'
+import FlowViewer from '@/views/FlowViewer.vue'
 
 const routes = [
   {
@@ -56,6 +58,18 @@ const routes = [
     name: 'TechDocs',
     component: TechDocs,
     meta: { title: '技术文档' }
+  },
+  {
+    path: '/joint-mapping',
+    name: 'JointMapping',
+    component: JointMapping,
+    meta: { title: '关节映射可视化' }
+  },
+  {
+    path: '/flows/:flowId?',
+    name: 'FlowViewer',
+    component: FlowViewer,
+    meta: { title: '技术流程可视化' }
   }
 ]
 

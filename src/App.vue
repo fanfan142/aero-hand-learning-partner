@@ -80,6 +80,24 @@
             技术文档
           </div>
         </router-link>
+        <router-link to="/joint-mapping" custom v-slot="{ navigate, isActive }">
+          <div
+            :class="['nav-item', { active: isActive }]"
+            @click="navigate"
+          >
+            <el-icon><Operation /></el-icon>
+            关节映射
+          </div>
+        </router-link>
+        <router-link to="/flows" custom v-slot="{ navigate, isActive }">
+          <div
+            :class="['nav-item', { active: isActive }]"
+            @click="navigate"
+          >
+            <el-icon><Connection /></el-icon>
+            技术流程
+          </div>
+        </router-link>
       </div>
 
       <div class="header-right">
@@ -113,7 +131,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useLearningStore } from '@/stores/learning'
-import { Link, TopRight, House, MagicStick, Odometer, Reading, Box, Document, Files, Share, Notebook, DataAnalysis, ChatDotRound } from '@element-plus/icons-vue'
+import { Link, TopRight, House, MagicStick, Odometer, Reading, Box, Document, Files, Share, Notebook, Operation, Connection, DataAnalysis, ChatDotRound } from '@element-plus/icons-vue'
 import AIAssistant from '@/components/ai/AIAssistant.vue'
 
 const learningStore = useLearningStore()
@@ -140,7 +158,8 @@ const showProgress = () => {
   align-items: center;
   padding: 0 30px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  gap: 40px;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 .header-left {
@@ -161,19 +180,22 @@ const showProgress = () => {
 
 .header-nav {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 8px 14px;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .nav-item:hover {
