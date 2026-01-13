@@ -7,39 +7,104 @@
     </el-page-header>
 
     <div class="flow-content">
-      <!-- 流程类型选择 -->
-      <el-card shadow="hover" class="flow-selector-card">
-        <template #header>
-          <span>选择流程</span>
-        </template>
+      <!-- 左侧：流程列表 + 概览 -->
+      <div class="flow-sidebar">
+        <el-card shadow="hover" class="flow-selector-card">
+          <template #header>
+            <span>选择流程</span>
+          </template>
 
-        <div class="flow-list">
-          <div
-            v-for="flow in flowList"
-            :key="flow.id"
-            class="flow-item"
-            :class="{ active: currentFlowId === flow.id }"
-            @click="selectFlow(flow.id)"
-          >
-            <el-icon :size="24" :color="flow.color">
-              <component :is="flow.icon" />
-            </el-icon>
-            <div class="flow-info">
-              <div class="flow-name">{{ flow.name }}</div>
-              <div class="flow-desc">{{ flow.description }}</div>
-              <div class="flow-meta">
-                <el-tag size="small" :type="getDifficultyType(flow.difficulty)">
-                  {{ flow.difficulty }}
-                </el-tag>
-                <span class="flow-duration">
-                  <el-icon><Clock /></el-icon>
-                  {{ flow.duration }}
-                </span>
+          <div class="flow-filter">
+            <el-input
+              v-model="flowSearchQuery"
+              placeholder="搜索流程..."
+              prefix-icon="Search"
+              clearable
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+            <el-select v-model="difficultyFilter" placeholder="难度" class="difficulty-select">
+              <el-option label="全部" value="all" />
+              <el-option label="入门" value="beginner" />
+              <el-option label="进阶" value="intermediate" />
+              <el-option label="高级" value="advanced" />
+            </el-select>
+          </div>
+
+          <div v-if="filteredFlowList.length" class="flow-list">
+            <div
+              v-for="flow in filteredFlowList"
+              :key="flow.id"
+              class="flow-item"
+              :class="{ active: currentFlowId === flow.id }"
+              @click="selectFlow(flow.id)"
+            >
+              <el-icon :size="24" :color="flow.color">
+                <component :is="iconMap[flow.icon]" />
+              </el-icon>
+              <div class="flow-info">
+                <div class="flow-name">{{ flow.name }}</div>
+                <div class="flow-desc">{{ flow.description }}</div>
+                <div class="flow-meta">
+                  <el-tag size="small" :type="getDifficultyType(flow.difficulty)">
+                    {{ getDifficultyLabel(flow.difficulty) }}
+                  </el-tag>
+                  <span class="flow-duration">
+                    <el-icon><Clock /></el-icon>
+                    {{ flow.duration }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </el-card>
+          <el-empty v-else description="没有匹配的流程" />
+        </el-card>
+
+        <el-card shadow="hover" class="flow-overview-card">
+          <template #header>
+            <span>流程概览</span>
+          </template>
+
+          <div class="overview-content">
+            <div class="overview-title">{{ flowDefinition?.name || '请选择流程' }}</div>
+            <div class="overview-desc">{{ flowDefinition?.description || '选择左侧流程以查看详细内容。' }}</div>
+            <div v-if="flowDefinition" class="overview-meta">
+              <el-tag size="small" :type="getDifficultyType(currentFlowMeta?.difficulty)">
+                {{ getDifficultyLabel(currentFlowMeta?.difficulty) }}
+              </el-tag>
+              <el-tag size="small" type="info">{{ flowDefinition.type }}</el-tag>
+              <el-tag size="small" type="success">{{ currentFlowMeta?.duration }}</el-tag>
+            </div>
+
+            <div v-if="flowDefinition" class="overview-stats">
+              <div class="stat-item">
+                <span class="stat-label">节点数量</span>
+                <span class="stat-value">{{ flowDefinition.nodes?.length || 0 }}</span>
+              </div>
+              <div class="stat-item" v-if="flowDefinition.lanes">
+                <span class="stat-label">泳道数量</span>
+                <span class="stat-value">{{ flowDefinition.lanes.length }}</span>
+              </div>
+              <div class="stat-item" v-if="flowDefinition.edges">
+                <span class="stat-label">连接数量</span>
+                <span class="stat-value">{{ flowDefinition.edges.length }}</span>
+              </div>
+            </div>
+
+            <div v-if="orderedNodes.length" class="overview-steps">
+              <div class="steps-title">关键步骤</div>
+              <ol>
+                <li v-for="node in orderedNodes" :key="node.id">
+                  <span class="step-name">{{ node.label || node.name }}</span>
+                  <span v-if="node.laneName" class="step-meta">· {{ node.laneName }}</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </el-card>
+      </div>
 
       <!-- 流程图展示 -->
       <el-card shadow="hover" class="flow-chart-card">
@@ -93,6 +158,24 @@
           <!-- 无流程图时显示 -->
           <el-empty v-else description="请选择一个流程" />
         </div>
+
+        <div v-if="flowDefinition" class="flow-legend">
+          <span class="legend-title">图例说明</span>
+          <div class="legend-items">
+            <span class="legend-item">
+              <span class="legend-dot input"></span>输入/输出
+            </span>
+            <span class="legend-item">
+              <span class="legend-dot process"></span>过程
+            </span>
+            <span class="legend-item">
+              <span class="legend-dot decision"></span>判断
+            </span>
+            <span class="legend-item">
+              <span class="legend-dot data"></span>数据
+            </span>
+          </div>
+        </div>
       </el-card>
 
       <!-- 节点详情 -->
@@ -133,7 +216,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 import {
-  Clock, Download, ArrowDown, FullScreen,
+  Clock, Download, ArrowDown, FullScreen, Search,
   Connection, Cpu, FolderOpened
 } from '@element-plus/icons-vue'
 import { flowList, getFlowDefinition } from '@/data/flow-definitions.js'
@@ -152,6 +235,8 @@ const route = useRoute()
 // 状态
 const currentFlowId = ref(route.params.flowId || flowList[0]?.id)
 const selectedNode = ref(null)
+const flowSearchQuery = ref('')
+const difficultyFilter = ref('all')
 
 // 图表引用
 const linearChartRef = ref(null)
@@ -162,6 +247,35 @@ let chartInstance = null
 // ========== 计算属性 ==========
 
 const flowDefinition = computed(() => getFlowDefinition(currentFlowId.value))
+const currentFlowMeta = computed(() => flowList.find(flow => flow.id === currentFlowId.value))
+const filteredFlowList = computed(() => {
+  const normalizedQuery = flowSearchQuery.value.trim().toLowerCase()
+  return flowList.filter(flow => {
+    const matchesQuery = !normalizedQuery || [flow.name, flow.description, flow.type]
+      .some(field => String(field).toLowerCase().includes(normalizedQuery))
+    const matchesDifficulty = difficultyFilter.value === 'all' || flow.difficulty === difficultyFilter.value
+    return matchesQuery && matchesDifficulty
+  })
+})
+
+const orderedNodes = computed(() => {
+  if (!flowDefinition.value) return []
+  if (flowDefinition.value.type === 'linear') {
+    return flowDefinition.value.nodes
+  }
+  if (flowDefinition.value.type === 'parallel') {
+    return flowDefinition.value.lanes.flatMap(lane => (
+      flowDefinition.value.nodes
+        .filter(node => node.lane === lane.id)
+        .sort((a, b) => a.order - b.order)
+        .map(node => ({ ...node, laneName: lane.name }))
+    ))
+  }
+  if (flowDefinition.value.type === 'tree') {
+    return flowDefinition.value.nodes.filter(node => !node.parent || node.parent === 'workspace')
+  }
+  return []
+})
 
 // ========== 方法 ==========
 
@@ -172,6 +286,15 @@ function getDifficultyType(difficulty) {
     advanced: 'danger'
   }
   return types[difficulty] || 'info'
+}
+
+function getDifficultyLabel(difficulty) {
+  const labels = {
+    beginner: '入门',
+    intermediate: '进阶',
+    advanced: '高级'
+  }
+  return labels[difficulty] || '未知'
 }
 
 function getNodeTypeTag(type) {
@@ -250,7 +373,8 @@ function initLinearChart() {
   chartInstance = echarts.init(linearChartRef.value)
 
   const nodes = flowDefinition.value.nodes.map((node, index) => {
-    const y = 90 - index * 11
+    const spacing = 80 / (flowDefinition.value.nodes.length || 1)
+    const y = 90 - index * spacing
     return {
       id: node.id,
       name: node.label,
@@ -332,6 +456,24 @@ function initParallelChart() {
   })
 
   const maxOrder = Math.max(...flowDefinition.value.nodes.map(n => n.order))
+  const nodeLookup = new Map()
+  flowDefinition.value.lanes.forEach((lane, laneIndex) => {
+    nodesByLane[lane.id].forEach(node => {
+      nodeLookup.set(node.id, { x: node.order, y: laneIndex })
+    })
+  })
+  const lineData = flowDefinition.value.edges.map(edge => {
+    const source = nodeLookup.get(edge.from)
+    const target = nodeLookup.get(edge.to)
+    if (!source || !target) return null
+    return {
+      coords: [[source.x, source.y], [target.x, target.y]],
+      lineStyle: {
+        color: edge.crossLane ? '#909399' : '#409EFF',
+        type: edge.crossLane ? 'dashed' : 'solid'
+      }
+    }
+  }).filter(Boolean)
 
   chartInstance.setOption({
     grid: {
@@ -349,24 +491,37 @@ function initParallelChart() {
       type: 'category',
       data: flowDefinition.value.lanes.map(l => l.name)
     },
-    series: flowDefinition.value.lanes.map((lane, laneIndex) => {
-      const laneNodes = nodesByLane[lane.id]
-      return {
-        type: 'scatter',
-        name: lane.name,
-        data: laneNodes.map(node => [node.order, laneIndex]),
-        symbolSize: 100,
-        label: {
-          show: true,
-          formatter: ({ data }) => {
-            const node = laneNodes.find(n => n.order === data[0])
-            return node ? node.label : ''
+    series: [
+      {
+        type: 'lines',
+        coordinateSystem: 'cartesian2d',
+        data: lineData,
+        symbol: ['none', 'arrow'],
+        symbolSize: 8,
+        lineStyle: {
+          width: 2,
+          opacity: 0.7
+        }
+      },
+      ...flowDefinition.value.lanes.map((lane, laneIndex) => {
+        const laneNodes = nodesByLane[lane.id]
+        return {
+          type: 'scatter',
+          name: lane.name,
+          data: laneNodes.map(node => [node.order, laneIndex]),
+          symbolSize: 100,
+          label: {
+            show: true,
+            formatter: ({ data }) => {
+              const node = laneNodes.find(n => n.order === data[0])
+              return node ? node.label : ''
+            },
+            fontSize: 11
           },
-          fontSize: 11
-        },
-        itemStyle: { color: lane.color }
-      }
-    })
+          itemStyle: { color: lane.color }
+        }
+      })
+    ]
   })
 
   chartInstance.on('click', (params) => {
@@ -474,6 +629,12 @@ onUnmounted(() => {
 watch(currentFlowId, () => {
   initChart()
 })
+
+watch(() => route.params.flowId, (flowId) => {
+  if (flowId && flowId !== currentFlowId.value) {
+    currentFlowId.value = flowId
+  }
+})
 </script>
 
 <style scoped>
@@ -493,6 +654,23 @@ watch(currentFlowId, () => {
   grid-template-columns: 350px 1fr 300px;
   gap: 20px;
   margin-top: 20px;
+}
+
+.flow-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.flow-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.difficulty-select {
+  width: 100%;
 }
 
 .flow-list {
@@ -550,6 +728,88 @@ watch(currentFlowId, () => {
   color: #999;
 }
 
+.flow-overview-card .overview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overview-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.overview-desc {
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.overview-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.overview-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 12px;
+  background: #f5f7fa;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #909399;
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #409EFF;
+}
+
+.overview-steps {
+  background: #f9fafc;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.steps-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #303133;
+}
+
+.overview-steps ol {
+  padding-left: 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.step-name {
+  font-weight: 500;
+}
+
+.step-meta {
+  color: #909399;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
 .chart-header {
   display: flex;
   justify-content: space-between;
@@ -568,6 +828,55 @@ watch(currentFlowId, () => {
 .flow-chart {
   width: 100%;
   height: 600px;
+}
+
+.flow-legend {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend-title {
+  font-size: 13px;
+  color: #909399;
+}
+
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-dot.input {
+  background: #67C23A;
+}
+
+.legend-dot.process {
+  background: #409EFF;
+}
+
+.legend-dot.decision {
+  background: #E6A23C;
+}
+
+.legend-dot.data {
+  background: #909399;
 }
 
 .node-detail-content {
@@ -632,6 +941,18 @@ watch(currentFlowId, () => {
 @media (max-width: 900px) {
   .flow-content {
     grid-template-columns: 1fr;
+  }
+
+  .flow-sidebar {
+    order: 1;
+  }
+
+  .flow-chart-card {
+    order: 2;
+  }
+
+  .node-detail-card {
+    order: 3;
   }
 }
 </style>
