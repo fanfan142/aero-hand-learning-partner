@@ -161,10 +161,54 @@ export function useLinearFlow(flowDefinition) {
 
   /**
    * 高亮路径
+   * @param {Array} nodeIds - 节点ID数组，表示要高亮的路径
    */
   function highlightPath(nodeIds) {
     highlightedPath.value = nodeIds
-    // TODO: 实现路径高亮逻辑
+
+    if (!chartInstance.value) return
+
+    // 更新边的样式以高亮路径
+    const option = chartInstance.value.getOption()
+    const edges = option.series[0].links
+    const highlightedEdges = []
+
+    // 构建路径边集合
+    for (let i = 0; i < nodeIds.length - 1; i++) {
+      highlightedEdges.push(`${nodeIds[i]}-${nodeIds[i + 1]}`)
+    }
+
+    // 更新边的样式
+    option.series[0].links = edges.map(edge => {
+      const edgeKey = `${edge.source}-${edge.target}`
+      const isHighlighted = highlightedEdges.includes(edgeKey)
+
+      return {
+        ...edge,
+        lineStyle: {
+          ...edge.lineStyle,
+          color: isHighlighted ? '#ff6b6b' : edge.lineStyle?.color || '#999',
+          width: isHighlighted ? 4 : 2,
+          opacity: isHighlighted ? 1 : 0.6
+        }
+      }
+    })
+
+    // 更新节点样式
+    option.series[0].data = option.series[0].data.map(node => {
+      const isHighlighted = nodeIds.includes(node.id)
+
+      return {
+        ...node,
+        itemStyle: {
+          ...node.itemStyle,
+          borderColor: isHighlighted ? '#ff6b6b' : node.itemStyle?.borderColor || 'transparent',
+          borderWidth: isHighlighted ? 3 : 0
+        }
+      }
+    })
+
+    chartInstance.value.setOption(option)
   }
 
   /**

@@ -240,6 +240,9 @@ import {
 import { useMultiJointMapping } from '@/composables/useJointMapping.js'
 import { useConfigStore } from '@/stores/config.js'
 import { exportAsJSON, importFromJSON } from '@/utils/export.js'
+import Logger from '@/utils/logger.js'
+
+const LOG_LABEL = 'JointMapping'
 
 // Store
 const configStore = useConfigStore()
@@ -487,7 +490,7 @@ async function importConfig() {
         updateJointsPosition(positionPercent.value / 100)
         updateCharts()
       } catch (error) {
-        console.error('导入配置失败:', error)
+        Logger.error(LOG_LABEL, '导入配置失败:', error)
       }
     }
   }

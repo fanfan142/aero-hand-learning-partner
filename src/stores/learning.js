@@ -1,5 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import Logger from '@/utils/logger.js'
+
+const LOG_LABEL = 'LearningStore'
 
 export const useLearningStore = defineStore('learning', () => {
   // 当前阶段
@@ -778,7 +781,7 @@ export const useLearningStore = defineStore('learning', () => {
           stage.completed = allComplete
         })
       } catch (e) {
-        console.error('加载进度失败:', e)
+        Logger.error(LOG_LABEL, '加载进度失败:', e)
       }
     }
   }

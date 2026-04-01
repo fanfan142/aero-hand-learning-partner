@@ -5,6 +5,9 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import Logger from '@/utils/logger.js'
+
+const LOG_LABEL = 'NotesStore'
 
 export const useNotesStore = defineStore('notes', () => {
   // ========== 状态 ==========
@@ -273,7 +276,7 @@ export const useNotesStore = defineStore('notes', () => {
       localStorage.setItem('aero-hand-code-snippets', JSON.stringify(codeSnippets.value))
       localStorage.setItem('aero-hand-categories', JSON.stringify(categories.value))
     } catch (error) {
-      console.error('保存笔记数据失败:', error)
+      Logger.error(LOG_LABEL, '保存笔记数据失败:', error)
     }
   }
 
@@ -292,7 +295,7 @@ export const useNotesStore = defineStore('notes', () => {
       if (savedSnippets) codeSnippets.value = JSON.parse(savedSnippets)
       if (savedCategories) categories.value = JSON.parse(savedCategories)
     } catch (error) {
-      console.error('加载笔记数据失败:', error)
+      Logger.error(LOG_LABEL, '加载笔记数据失败:', error)
     }
   }
 

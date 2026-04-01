@@ -27,11 +27,30 @@ export default defineConfig({
     assetsDir: 'assets',
     sourcemap: false,
     target: 'es2015',
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'element-plus': ['element-plus'],
-          'markdown-it': ['markdown-it']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // Element Plus 及其依赖单独打包
+            if (id.includes('element-plus')) {
+              return 'element-plus'
+            }
+            // ECharts 单独打包
+            if (id.includes('echarts')) {
+              return 'echarts'
+            }
+            // Markdown 解析库
+            if (id.includes('markdown-it') || id.includes('highlight.js')) {
+              return 'markdown'
+            }
+            // Vue 生态
+            if (id.includes('vue') || id.includes('@vue')) {
+              return 'vue-vendor'
+            }
+            // 其他 node_modules 统一打包
+            return 'vendor'
+          }
         }
       }
     }

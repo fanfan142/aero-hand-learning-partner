@@ -277,6 +277,9 @@ import {
   DataAnalysis
 } from '@element-plus/icons-vue'
 import MarkdownIt from 'markdown-it'
+import Logger from '@/utils/logger.js'
+
+const LOG_LABEL = 'TechDocs'
 
 const searchQuery = ref('')
 const selectedCategory = ref('all')
@@ -670,7 +673,7 @@ async function loadMarkdownDoc(path) {
       }
     }
   } catch (error) {
-    console.error('加载文档失败:', error)
+    Logger.error(LOG_LABEL, '加载文档失败:', error)
     currentDocContent.value = `# 加载错误\n\n加载文档时发生错误：\n\`\`\`\n${error.message}\n\`\`\``
   } finally {
     loading.value = false

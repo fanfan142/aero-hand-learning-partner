@@ -3,6 +3,10 @@
  * 用于导出配置、数据等
  */
 
+import Logger from './logger.js'
+
+const LOG_LABEL = 'Export'
+
 /**
  * 导出为 JSON 文件
  * @param {Object} data - 要导出的数据
@@ -20,7 +24,7 @@ export function exportAsJSON(data, filename = 'export.json') {
  */
 export function exportAsCSV(data, filename = 'export.csv') {
   if (!Array.isArray(data) || data.length === 0) {
-    console.error('数据必须是非空数组')
+    Logger.error(LOG_LABEL, '数据必须是非空数组')
     return
   }
 
@@ -47,7 +51,7 @@ export function exportAsCSV(data, filename = 'export.csv') {
  */
 export function exportAsMarkdown(data, filename = 'export.md') {
   if (!Array.isArray(data) || data.length === 0) {
-    console.error('数据必须是非空数组')
+    Logger.error(LOG_LABEL, '数据必须是非空数组')
     return
   }
 
@@ -137,7 +141,7 @@ export async function copyToClipboard(text) {
     await navigator.clipboard.writeText(text)
     return true
   } catch (error) {
-    console.error('复制失败:', error)
+    Logger.error(LOG_LABEL, '复制失败:', error)
     return false
   }
 }

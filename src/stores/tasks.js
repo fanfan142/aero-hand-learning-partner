@@ -6,6 +6,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { detailedTaskTree } from '@/data/detailed-tasks.js'
+import Logger from '@/utils/logger.js'
+
+const LOG_LABEL = 'TasksStore'
 
 export const useTasksStore = defineStore('tasks', () => {
   // ========== 状态 ==========
@@ -288,7 +291,7 @@ export const useTasksStore = defineStore('tasks', () => {
         localStorage.setItem('aero-hand-current-task', currentTaskId.value)
       }
     } catch (error) {
-      console.error('保存任务状态失败:', error)
+      Logger.error(LOG_LABEL, '保存任务状态失败:', error)
     }
   }
 
@@ -319,7 +322,7 @@ export const useTasksStore = defineStore('tasks', () => {
         currentTaskId.value = current
       }
     } catch (error) {
-      console.error('加载任务状态失败:', error)
+      Logger.error(LOG_LABEL, '加载任务状态失败:', error)
     }
   }
 

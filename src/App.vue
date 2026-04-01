@@ -125,22 +125,60 @@
     >
       <AIAssistant :context="{ title: '全局', id: 'default' }" />
     </el-drawer>
+
+    <!-- 学习进度对话框 -->
+    <el-dialog
+      v-model="progressDialogVisible"
+      title="📊 学习进度"
+      width="500px"
+    >
+      <div class="progress-detail">
+        <div class="progress-main">
+          <el-progress
+            type="circle"
+            :percentage="progressPercent"
+            :stroke-width="12"
+            :width="180"
+          />
+          <div class="progress-label">
+            <h3>{{ progressPercent }}%</h3>
+            <p>学习进度</p>
+          </div>
+        </div>
+        <el-divider />
+        <div class="progress-info">
+          <p>当前阶段：{{ learningStore.currentStageData?.title }}</p>
+          <p>已完成任务：{{ learningStore.completedTasks.size }} 个</p>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="progressDialogVisible = false">关闭</el-button>
+        <el-button type="primary" @click="goToLearning">查看详情</el-button>
+      </template>
+    </el-dialog>
   </el-container>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import { useLearningStore } from '@/stores/learning'
-import { Link, TopRight, House, MagicStick, Odometer, Reading, Box, Document, Files, Share, Notebook, Operation, Connection, DataAnalysis, ChatDotRound } from '@element-plus/icons-vue'
+import { House, MagicStick, Odometer, Reading, Box, Document, Files, Share, Notebook, Operation, Connection, DataAnalysis, ChatDotRound } from '@element-plus/icons-vue'
 import AIAssistant from '@/components/ai/AIAssistant.vue'
+import { ElMessage } from 'element-plus'
 
 const learningStore = useLearningStore()
 const aiDrawerVisible = ref(false)
+const progressDialogVisible = ref(false)
 
 const progressPercent = computed(() => learningStore.progressPercent)
 
 const showProgress = () => {
-  // TODO: 显示进度对话框
+  progressDialogVisible.value = true
+}
+
+const goToLearning = () => {
+  progressDialogVisible.value = false
+  window.location.hash = '#/learning'
 }
 </script>
 
@@ -218,5 +256,38 @@ const showProgress = () => {
 
 .app-main {
   padding: 30px;
+}
+
+.progress-detail {
+  text-align: center;
+}
+
+.progress-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  padding: 20px 0;
+}
+
+.progress-label h3 {
+  margin: 0;
+  font-size: 28px;
+  color: #303133;
+}
+
+.progress-label p {
+  margin: 8px 0 0 0;
+  color: #909399;
+}
+
+.progress-info {
+  text-align: left;
+  padding: 10px 20px;
+}
+
+.progress-info p {
+  margin: 8px 0;
+  color: #606266;
 }
 </style>

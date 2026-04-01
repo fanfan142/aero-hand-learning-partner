@@ -6,6 +6,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { jointDefinitions } from '@/data/joint-mappings.js'
+import Logger from '@/utils/logger.js'
+
+const LOG_LABEL = 'ConfigStore'
 
 export const useConfigStore = defineStore('config', () => {
   // ========== 状态 ==========
@@ -62,7 +65,7 @@ export const useConfigStore = defineStore('config', () => {
    */
   function updateJointConfig(jointId, params) {
     if (!servoConfig.value[jointId]) {
-      console.warn(`关节 ${jointId} 不存在`)
+      Logger.warn(LOG_LABEL, `关节 ${jointId} 不存在`)
       return
     }
 
@@ -194,7 +197,7 @@ export const useConfigStore = defineStore('config', () => {
       localStorage.setItem('aero-hand-config', JSON.stringify(servoConfig.value))
       localStorage.setItem('aero-hand-config-name', currentConfigName.value)
     } catch (error) {
-      console.error('保存配置失败:', error)
+      Logger.error(LOG_LABEL, '保存配置失败:', error)
     }
   }
 
@@ -216,7 +219,7 @@ export const useConfigStore = defineStore('config', () => {
         currentConfigName.value = name
       }
     } catch (error) {
-      console.error('加载配置失败:', error)
+      Logger.error(LOG_LABEL, '加载配置失败:', error)
       initDefaultConfig()
     }
   }
@@ -228,7 +231,7 @@ export const useConfigStore = defineStore('config', () => {
     try {
       localStorage.setItem('aero-hand-config-history', JSON.stringify(configHistory.value))
     } catch (error) {
-      console.error('保存历史记录失败:', error)
+      Logger.error(LOG_LABEL, '保存历史记录失败:', error)
     }
   }
 
@@ -242,7 +245,7 @@ export const useConfigStore = defineStore('config', () => {
         configHistory.value = JSON.parse(saved)
       }
     } catch (error) {
-      console.error('加载历史记录失败:', error)
+      Logger.error(LOG_LABEL, '加载历史记录失败:', error)
     }
   }
 

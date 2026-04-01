@@ -79,6 +79,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import Logger from '@/utils/logger.js'
+
+const LOG_LABEL = 'HardwareChecklist'
 
 // 数据
 const STORAGE_KEY = 'hardware-checklist-progress'
@@ -468,7 +471,7 @@ const loadProgress = () => {
         }
       })
     } catch (e) {
-      console.error('加载进度失败:', e)
+      Logger.error(LOG_LABEL, '加载进度失败:', e)
     }
   }
 }

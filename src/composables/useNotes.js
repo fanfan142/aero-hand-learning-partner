@@ -6,6 +6,9 @@
 import { ref, computed } from 'vue'
 import { useNotesStore } from '@/stores/notes.js'
 import MarkdownIt from 'markdown-it'
+import Logger from '@/utils/logger.js'
+
+const LOG_LABEL = 'useNotes'
 
 const md = new MarkdownIt({
   html: true,
@@ -181,7 +184,7 @@ export function useCodeSnippetManager() {
       await navigator.clipboard.writeText(code)
       return true
     } catch (error) {
-      console.error('复制失败:', error)
+      Logger.error(LOG_LABEL, '复制失败:', error)
       return false
     }
   }
