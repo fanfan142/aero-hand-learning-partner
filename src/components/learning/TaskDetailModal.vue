@@ -333,11 +333,28 @@ watch(() => props.task, (newTask) => {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .header-icon {
   font-size: 32px;
   flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.header-icon:hover {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .header-content {
@@ -367,6 +384,25 @@ watch(() => props.task, (newTask) => {
 /* Sections */
 .section {
   margin-bottom: 20px;
+  animation: fadeInUp 0.4s ease-out;
+  animation-fill-mode: both;
+}
+
+.section:nth-child(1) { animation-delay: 0.05s; }
+.section:nth-child(2) { animation-delay: 0.1s; }
+.section:nth-child(3) { animation-delay: 0.15s; }
+.section:nth-child(4) { animation-delay: 0.2s; }
+.section:nth-child(5) { animation-delay: 0.25s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .section-title {
@@ -393,6 +429,13 @@ watch(() => props.task, (newTask) => {
 /* Blocked Alert */
 .blocked-alert {
   margin-bottom: 20px;
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
 }
 
 /* Steps */
@@ -411,10 +454,16 @@ watch(() => props.task, (newTask) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 12px 16px;
   background: linear-gradient(135deg, #e6f3ff 0%, #f0f9ff 100%);
   border: 1px solid #b3d9ff;
-  border-radius: 6px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.command-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
 }
 
 .command-text {
@@ -426,7 +475,12 @@ watch(() => props.task, (newTask) => {
 
 /* Expected */
 .expected-section :deep(.el-alert) {
-  border-radius: 6px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.expected-section :deep(.el-alert:hover) {
+  transform: scale(1.01);
 }
 
 /* Tips */
@@ -454,17 +508,25 @@ watch(() => props.task, (newTask) => {
   background: #f9fafc;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
 }
 
 .resource-item:hover {
   background: #f0f1f2;
-  transform: translateX(4px);
+  transform: translateX(6px);
+  border-color: rgba(64, 158, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .resource-icon {
   font-size: 24px;
   flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.resource-item:hover .resource-icon {
+  transform: scale(1.15) rotate(5deg);
 }
 
 .resource-info {

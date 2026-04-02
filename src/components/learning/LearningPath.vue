@@ -336,13 +336,20 @@ const handleStageClick = (stage) => {
   padding: 16px;
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   background: #fafafa;
+  border: 1px solid transparent;
 }
 
 .stage-item:hover {
   background: #f5f7fa;
-  transform: translateX(4px);
+  transform: translateX(6px);
+  border-color: rgba(64, 158, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.stage-item:active {
+  transform: translateX(4px) scale(0.99);
 }
 
 .stage-current {
@@ -367,8 +374,8 @@ const handleStageClick = (stage) => {
 }
 
 .node-circle {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: #e4e7ed;
   display: flex;
@@ -377,18 +384,30 @@ const handleStageClick = (stage) => {
   font-size: 14px;
   font-weight: 600;
   color: #606266;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .stage-current .node-circle {
   background: #409eff;
   color: white;
-  box-shadow: 0 0 12px rgba(64, 158, 255, 0.5);
+  box-shadow: 0 0 16px rgba(64, 158, 255, 0.5);
+  animation: nodePulse 2s ease-in-out infinite;
+}
+
+@keyframes nodePulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(64, 158, 255, 0.4); }
+  50% { box-shadow: 0 0 24px rgba(64, 158, 255, 0.7); }
 }
 
 .stage-completed .node-circle {
   background: #67c23a;
   color: white;
+  box-shadow: 0 0 12px rgba(103, 194, 58, 0.4);
+}
+
+.stage-completed .node-circle:hover {
+  transform: scale(1.1);
 }
 
 .node-icon {

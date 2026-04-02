@@ -577,6 +577,23 @@ onUnmounted(() => {
   min-height: 100vh;
   background: var(--bg-base);
   transition: background-color 0.3s ease;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* 背景网格纹理 */
+.app-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(102, 126, 234, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(118, 75, 162, 0.03) 0%, transparent 40%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .app-header {
@@ -586,18 +603,20 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.25);
   gap: 16px;
   flex-wrap: wrap;
   position: sticky;
   top: 0;
   z-index: 1000;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
 }
 
 .app-header.header-scrolled {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.35);
   padding: 0 20px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.98) 0%, rgba(118, 75, 162, 0.98) 100%);
 }
 
 .header-left {
@@ -609,11 +628,12 @@ onUnmounted(() => {
 .logo-icon {
   font-size: 28px;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .logo-icon:hover {
-  transform: scale(1.1);
+  transform: scale(1.15) rotate(10deg);
 }
 
 .app-title {
@@ -621,6 +641,7 @@ onUnmounted(() => {
   font-size: 20px;
   font-weight: 600;
   white-space: nowrap;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* 移动端菜单按钮 */
@@ -628,6 +649,11 @@ onUnmounted(() => {
   display: none;
   color: white !important;
   font-size: 20px;
+  transition: transform 0.3s ease;
+}
+
+.mobile-menu-btn:hover {
+  transform: scale(1.1);
 }
 
 /* 桌面端导航 */
@@ -641,26 +667,48 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.15);
   font-size: 13px;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.nav-item:hover::before {
+  left: 100%;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .nav-item.active {
   background: white;
   color: #667eea;
   border-color: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.nav-item.active::before {
+  display: none;
 }
 
 /* 移动端导航菜单 */
@@ -672,7 +720,7 @@ onUnmounted(() => {
   right: 0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   z-index: 999;
 }
 
@@ -680,17 +728,36 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
-  border-radius: 8px;
+  padding: 14px 18px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   color: white;
   font-size: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-nav-item::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  transition: width 0.3s ease;
+}
+
+.mobile-nav-item:hover::after,
+.mobile-nav-item.active::after {
+  width: 100%;
 }
 
 .mobile-nav-item:hover,
 .mobile-nav-item.active {
   background: rgba(255, 255, 255, 0.2);
+  padding-left: 22px;
 }
 
 /* 移动端显示 */
@@ -741,12 +808,17 @@ onUnmounted(() => {
 
 .header-right .el-button {
   color: white !important;
-  transition: all 0.25s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 10px;
 }
 
 .header-right .el-button:hover {
   background: rgba(255, 255, 255, 0.2) !important;
-  transform: scale(1.05);
+  transform: scale(1.08);
+}
+
+.header-right .el-button:active {
+  transform: scale(0.95);
 }
 
 .notification-btn,
@@ -757,6 +829,12 @@ onUnmounted(() => {
 .notification-btn :deep(.el-badge__content) {
   background-color: #f56c6c;
   border: none;
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
 .progress-btn,
@@ -766,11 +844,21 @@ onUnmounted(() => {
   gap: 4px;
 }
 
+.ai-btn {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+.ai-btn:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
 /* 主内容区 */
 .app-main {
   padding: 24px;
   min-height: calc(100vh - 60px);
   position: relative;
+  z-index: 1;
 }
 
 /* 全局加载指示器 */
@@ -789,10 +877,25 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: var(--el-color-primary);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  border-radius: 20px;
-  box-shadow: 0 2px 12px rgba(102, 126, 234, 0.3);
+  border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  animation: loadingBounce 1s ease-in-out infinite;
+}
+
+@keyframes loadingBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.loading-spinner .el-icon {
+  animation: loadingSpin 1s linear infinite;
+}
+
+@keyframes loadingSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* 进度对话框 */
@@ -852,8 +955,14 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.shortcut-item:hover {
+  padding-left: 8px;
+  background: rgba(102, 126, 234, 0.03);
 }
 
 .shortcut-item:last-child {
@@ -868,13 +977,19 @@ onUnmounted(() => {
 
 .shortcut-keys kbd {
   display: inline-block;
-  padding: 4px 8px;
+  padding: 4px 10px;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 6px;
   font-family: 'SF Mono', Monaco, monospace;
   font-size: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.shortcut-keys kbd:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
 }
 
 .shortcut-desc {
@@ -882,32 +997,60 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
-/* 路由切换动画 */
-.fade-enter-active,
+/* 路由切换动画 - 增强版 */
+.fade-enter-active {
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fade-enter-from {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(20px) scale(0.98);
 }
 
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-10px) scale(1.02);
+}
+
+/* 页面切换滑入动画 */
+.page-slide-enter-active,
+.page-slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-slide-enter-from {
+  opacity: 0;
+  transform: translateX(40px);
+}
+
+.page-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-40px);
 }
 
 /* 菜单滑动动画 */
 .slide-down-enter-active,
 .slide-down-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
 .slide-down-enter-from,
 .slide-down-leave-to {
   opacity: 0;
   transform: translateY(-20px);
+  max-height: 0;
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+  max-height: 500px;
 }
 
 /* 设置菜单 */
@@ -919,19 +1062,23 @@ onUnmounted(() => {
 }
 
 .settings-btn {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white !important;
   border: none;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
-  transition: all 0.25s ease;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .settings-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  transform: scale(1.12) rotate(10deg);
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.5);
+}
+
+.settings-btn:active {
+  transform: scale(0.95);
 }
 
 .settings-menu :deep(.el-dropdown-menu__item) {
@@ -939,6 +1086,12 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.settings-menu :deep(.el-dropdown-menu__item:hover) {
+  padding-left: 14px;
+  background: rgba(102, 126, 234, 0.08);
 }
 
 .settings-menu :deep(.el-dropdown-menu__item .el-icon) {
@@ -953,8 +1106,8 @@ onUnmounted(() => {
   }
 
   .settings-btn {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
 }
 </style>
@@ -984,12 +1137,12 @@ onUnmounted(() => {
   --danger-color: #f56c6c;
 
   /* 统一卡片阴影 */
-  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  --card-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.12);
+  --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --card-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.12);
 
   /* 统一圆角 */
-  --border-radius: 8px;
-  --border-radius-lg: 12px;
+  --border-radius: 12px;
+  --border-radius-lg: 16px;
 }
 
 /* 深色模式变量 */
@@ -1007,13 +1160,13 @@ html.dark-mode {
   --primary-light: #a8b8f5;
   --primary-dark: #667eea;
 
-  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-  --card-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --card-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.3);
 }
 
 /* 全局过渡 */
 * {
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
 }
 
 /* 全局深色模式样式 */
@@ -1031,6 +1184,13 @@ html.dark-mode .card {
   color: var(--text-primary);
   border-color: var(--border-color);
   box-shadow: var(--card-shadow);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.dark-mode .el-card:hover,
+html.dark-mode .card:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-4px);
 }
 
 html.dark-mode .el-dialog {
@@ -1075,7 +1235,7 @@ html.dark-mode .el-input__wrapper:hover {
 
 html.dark-mode .el-input__wrapper.is-focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(143, 164, 240, 0.2);
+  box-shadow: 0 0 0 3px rgba(143, 164, 240, 0.2), 0 4px 16px rgba(143, 164, 240, 0.15);
 }
 
 html.dark-mode body {
@@ -1092,12 +1252,18 @@ html.dark-mode .el-button {
   background-color: var(--bg-surface);
   border-color: var(--border-color);
   color: var(--text-primary);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html.dark-mode .el-button:hover {
   background-color: var(--bg-hover);
   border-color: var(--primary-color);
   color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+html.dark-mode .el-button:active {
+  transform: translateY(0);
 }
 
 html.dark-mode .el-button--primary {
@@ -1172,16 +1338,27 @@ html.dark-mode .el-tag {
   background-color: var(--bg-hover);
   border-color: var(--border-color);
   color: var(--text-regular);
+  transition: all 0.25s ease;
 }
 
 /* 过渡动画平滑 */
 html.dark-mode,
 html.dark-mode * {
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 /* 禁用某些元素的过渡以避免闪烁 */
 el-input, el-select, el-button {
   transition: none;
+}
+
+/* 深色模式下的徽章脉冲动画 */
+html.dark-mode .el-badge__content {
+  animation: badgePulseDark 2s ease-in-out infinite;
+}
+
+@keyframes badgePulseDark {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 108, 108, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(245, 108, 108, 0); }
 }
 </style>
