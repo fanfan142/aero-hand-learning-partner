@@ -180,7 +180,10 @@ const routes = [
 const router = createRouter({
   // 根据环境选择历史模式
   // GitHub Pages 使用 hash 模式
-  history: import.meta.env.VITE_USE_HASH_ROUTER === 'true'
+  history: (
+    import.meta.env.VITE_USE_HASH_ROUTER === 'true' ||
+    import.meta.env.BASE_URL !== '/'
+  )
     ? createWebHashHistory()
     : createWebHistory(),
   routes,
