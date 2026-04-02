@@ -164,7 +164,7 @@
 
             <div class="setting-item">
               <div class="setting-info">
-                <el-icon><Speaker /></el-icon>
+                <el-icon><Microphone /></el-icon>
                 <div>
                   <div class="setting-label">声音提醒</div>
                   <div class="setting-desc">通知时播放提示音</div>
@@ -345,10 +345,10 @@ import { usePreferencesStore } from '@/stores/preferences'
 import { useNotificationsStore } from '@/stores/notifications'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Setting, Sunny, Moon, VideoPlay, Bell, ChatLineSquare,
+  Setting, Sunny, Moon, VideoPlay, Bell, Message,
   Folder, Download, Upload, RefreshLeft, Warning,
   InfoFilled, Check, Brush, Grid, CircleCheck,
-  Delete, Trophy, MagicStick, Document, Translate
+  Delete, Trophy, MagicStick, Document, Microphone
 } from '@element-plus/icons-vue'
 
 const preferencesStore = usePreferencesStore()
@@ -365,7 +365,7 @@ const sections = [
   { key: 'theme', label: '主题', icon: Sunny },
   { key: 'animation', label: '动画', icon: VideoPlay },
   { key: 'notification', label: '通知', icon: Bell },
-  { key: 'language', label: '语言', icon: Translate },
+  { key: 'language', label: '语言', icon: Message },
   { key: 'data', label: '数据', icon: Folder },
   { key: 'about', label: '关于', icon: InfoFilled }
 ]
