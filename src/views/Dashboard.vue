@@ -125,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useLearningStore } from '@/stores/learning'
 import AdvancedCharts from '@/components/common/AdvancedCharts.vue'
 import {
@@ -266,7 +266,6 @@ onMounted(() => {
 })
 
 // 清理定时器
-import { onUnmounted } from 'vue'
 onUnmounted(() => {
   if (autoRefreshTimer) {
     clearInterval(autoRefreshTimer)

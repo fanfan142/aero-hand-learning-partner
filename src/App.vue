@@ -189,7 +189,7 @@
 
         <!-- 快捷键提示按钮 -->
         <el-button text @click="showShortcuts = true" title="键盘快捷键">
-          <el-icon><Keyboard /></el-icon>
+          <el-icon><Edit /></el-icon>
         </el-button>
 
         <!-- 搜索按钮 -->
@@ -345,7 +345,7 @@
               查看新手教程
             </el-dropdown-item>
             <el-dropdown-item command="shortcuts" divided>
-              <el-icon><Keyboard /></el-icon>
+              <el-icon><Edit /></el-icon>
               键盘快捷键
             </el-dropdown-item>
           </el-dropdown-menu>
@@ -364,7 +364,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 import {
   House, MagicStick, Odometer, Reading, Box, Document, Files, Share, Notebook,
   Operation, Connection, DataAnalysis, ChatDotRound, Search, Sunny, Moon,
-  Keyboard, Expand, Fold, Collection, SuccessFilled, Loading, Setting,
+  Edit, Expand, Fold, Collection, SuccessFilled, Loading, Setting,
   RefreshRight, Bell
 } from '@element-plus/icons-vue'
 import AIAssistant from '@/components/ai/AIAssistant.vue'

@@ -3799,6 +3799,4268 @@ plt.show()
         `
       }
     ]
+  },
+  // ========== 快速开始指南 ==========
+  {
+    id: 'quickStart',
+    title: '快速开始',
+    icon: 'Rocket',
+    description: '从零开始的完整上手指南，包括环境搭建、首次运行和基础操作',
+    articles: [
+      {
+        id: 'environment-setup',
+        title: '环境搭建指南',
+        summary: '手把手教你搭建 Aero Hand 开发环境，包括软件安装和硬件连接。',
+        tags: ['环境', '安装', '配置'],
+        content: `
+## 环境要求
+
+### 硬件要求
+
+| 组件 | 最低配置 | 推荐配置 |
+|------|----------|----------|
+| CPU | 双核 2GHz | 四核 3GHz+ |
+| 内存 | 4GB | 8GB+ |
+| 存储 | 10GB 可用 | 20GB+ SSD |
+| USB | USB 2.0 | USB 3.0 |
+| 操作系统 | Windows 10 / Ubuntu 20.04 / macOS 11 | Windows 11 / Ubuntu 22.04 |
+
+### 软件要求
+
+\`\`\`
+必须安装：
+├─ Python 3.10+ (必须)
+├─ Git (必须)
+├─ Arduino IDE 或 PlatformIO (固件开发)
+└─ USB 驱动程序 (CH340/CP2102)
+
+推荐安装：
+├─ VS Code (代码编辑)
+├─ MuJoCo (仿真)
+├─ ROS2 Humble (高级应用)
+└─ Docker (容器化开发)
+\`\`\`
+
+---
+
+## 第一步：软件安装
+
+### 1.1 安装 Python
+
+\`\`\`bash
+# Windows
+# 下载 https://www.python.org/downloads/
+# 安装时勾选 "Add Python to PATH"
+
+# 验证安装
+python --version
+# 应显示 Python 3.10.x 或更高
+
+# Linux/macOS
+sudo apt install python3.10  # Ubuntu
+brew install python3          # macOS
+\`\`\`
+
+### 1.2 安装 Git
+
+\`\`\`bash
+# Windows
+# 下载 https://git-scm.com/download/win
+
+# Linux
+sudo apt install git
+
+# macOS (已预装)
+git --version
+\`\`\`
+
+### 1.3 克隆项目
+
+\`\`\`bash
+# 克隆主仓库
+git clone https://github.com/TetherIA/aero-hand-open.git
+
+# 进入目录
+cd aero-hand-open
+
+# 查看结构
+ls -la
+\`\`\`
+
+### 1.4 安装 SDK
+
+\`\`\`bash
+# 进入 SDK 目录
+cd sdk
+
+# 创建虚拟环境（推荐）
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\\Scripts\\activate   # Windows
+
+# 安装依赖
+pip install -e .
+pip install pyserial numpy
+
+# 验证安装
+python -c "from aero_open_sdk import AeroHand; print('SDK OK')"
+\`\`\`
+
+### 1.5 安装固件工具
+
+\`\`\`bash
+# Arduino IDE
+# 1. 下载 https://www.arduino.cc/en/software
+# 2. 安装 ESP32 开发板支持：
+#    文件 → 首选项 → 附加开发板管理器网址
+#    添加：https://dl.espressif.com/dl/package_esp32_index.json
+# 3. 工具 → 开发板 → 开发板管理器 → 安装 ESP32
+
+# 或使用 PlatformIO
+pip install platformio
+pio --version
+\`\`\`
+
+---
+
+## 第二步：硬件连接
+
+### 2.1 检查组件
+
+\`\`\`
+发货清单检查：
+□ ESP32-S3 开发板 × 1
+□ USB-C 数据线 × 1
+□ 5V 3A 电源适配器 × 1
+□ HLS3606M 舵机 × 7 (已安装在手上)
+
+注意：如果是散件，需要先完成组装！
+\`\`\`
+
+### 2.2 连接步骤
+
+\`\`\`
+1. 将 USB-C 线连接到 ESP32-S3
+2. 将另一端连接到电脑
+3. 确认电源开关处于 OFF 状态（如果有）
+4. 不要在首次连接时接通舵机电源！
+
+首次连接只给 ESP32 供电，避免意外损坏
+\`\`\`
+
+### 2.3 验证连接
+
+\`\`\`bash
+# Windows - 检查设备管理器
+# 找到 "USB Serial Device (COMX)"
+
+# Linux - 检查 /dev/ttyUSB*
+ls -l /dev/ttyUSB*
+# 或
+ls -l /dev/ttyACM*
+
+# macOS - 检查 /dev/tty.*
+ls -l /dev/tty.*
+\`\`\`
+
+---
+
+## 第三步：首次运行
+
+### 3.1 测试 SDK 连接
+
+\`\`\`python
+# test_connection.py
+from aero_open_sdk import AeroHand
+import time
+
+print("正在连接...")
+hand = AeroHand()
+
+print("连接成功!")
+print(f"端口: {hand.serial.port}")
+print(f"状态: {hand.state}")
+
+# 测试归位
+print("\\n执行归位...")
+hand.home()
+print("归位完成!")
+
+# 测试运动
+print("\\n测试运动...")
+hand.set_joint_positions([50, 50, 50, 50, 50, 50, 50])
+time.sleep(1)
+
+print("复位...")
+hand.set_joint_positions([0, 0, 0, 0, 0, 0, 0])
+
+print("\\n全部测试通过!")
+\`\`\`
+
+### 3.2 运行示例脚本
+
+\`\`\`bash
+# 进入示例目录
+cd sdk/examples
+
+# 运行序列示例
+python run_sequence.py
+
+# 应该看到：
+# 开始执行动作序列...
+# 动作 1: [0, 0, 0, 0, 0, 0, 0]
+# 当前位置: [0, 0, 0, 0, 0, 0, 0]
+# ...
+# 序列执行完成!
+\`\`\`
+
+---
+
+## 常见问题
+
+### Q: Python 找不到 aero_open_sdk？
+
+**解决方法：**
+\`\`\`bash
+# 确认安装
+pip list | grep aero
+
+# 如果没有，重新安装
+pip install -e .
+
+# 检查 Python 路径
+python -c "import sys; print('\\n'.join(sys.path))"
+\`\`\`
+
+### Q: 串口权限被拒绝？
+
+**Linux 解决方法：**
+\`\`\`bash
+# 添加用户到 dialout 组
+sudo usermod -a -G dialout $USER
+
+# 重新登录后生效
+# 或直接执行
+sudo chmod 666 /dev/ttyUSB0
+\`\`\`
+
+### Q: 找不到 ESP32 端口？
+
+**检查步骤：**
+1. 确认 USB 线支持数据传输（有些仅供充电）
+2. 尝试不同的 USB 端口
+3. 安装/更新 CH340 或 CP2102 驱动
+4. 如果使用虚拟机，确认 USB 穿透配置
+        `
+      },
+      {
+        id: 'first-demo',
+        title: '首次运行演示',
+        summary: '运行你的第一个 Aero Hand 演示程序，了解基本控制流程。',
+        tags: ['演示', '入门', '控制'],
+        content: `
+## 演示概览
+
+本指南将带你运行一个完整的演示程序，涵盖：
+
+\`\`\`
+1. 初始化和归位
+2. 基本运动控制
+3. 读取传感器数据
+4. 执行预设手势
+5. 清理和复位
+\`\`\`
+
+---
+
+## 完整演示代码
+
+\`\`\`python
+# first_demo.py
+from aero_open_sdk import AeroHand
+import time
+
+def main():
+    """首次演示程序"""
+
+    print("=" * 50)
+    print("Aero Hand 首次演示")
+    print("=" * 50)
+
+    # 1. 初始化
+    print("\\n[1/5] 初始化机械手...")
+    hand = AeroHand()
+
+    # 2. 归位
+    print("[2/5] 执行归位...")
+    hand.home()
+    time.sleep(1)
+    print("归位完成!")
+
+    # 3. 读取当前位置
+    print("\\n[3/5] 读取当前位置...")
+    positions = hand.get_joint_positions()
+    print(f"当前关节位置: {positions}")
+
+    # 4. 执行手势序列
+    print("\\n[4/5] 执行手势序列...")
+
+    gestures = [
+        ("张开", [0, 0, 0, 0, 0, 0, 0]),
+        ("半握", [30, 30, 30, 30, 40, 30, 0]),
+        ("握拳", [80, 80, 80, 80, 90, 70, 0]),
+        ("OK手势", [0, 100, 100, 100, 80, 50, 0]),
+        ("点赞", [0, 100, 100, 100, 0, 0, 0]),
+    ]
+
+    for name, positions in gestures:
+        print(f"  - {name}...")
+        hand.set_joint_positions(positions)
+        time.sleep(1.5)
+
+    # 5. 复位
+    print("\\n[5/5] 复位到初始状态...")
+    hand.set_joint_positions([0, 0, 0, 0, 0, 0, 0])
+    time.sleep(1)
+
+    print("\\n" + "=" * 50)
+    print("演示完成!")
+    print("=" * 50)
+
+if __name__ == "__main__":
+    main()
+\`\`\`
+
+---
+
+## 代码解析
+
+### 初始化过程
+
+\`\`\`
+ AeroHand() 内部流程：
+
+ 1. 扫描可用串口
+    └─→ 查找包含 "USB" 或 "ACM" 的设备
+
+ 2. 尝试连接
+    └─→ 使用默认参数 921600 波特率
+
+ 3. 发送心跳检测
+    └─→ 验证固件响应
+
+ 4. 初始化状态
+    └─→ 设置内部状态机为 READY
+
+ 典型输出：
+ "正在连接..."
+ "连接成功!"
+ "端口: /dev/ttyUSB0"
+ "状态: READY"
+\`\`\`
+
+### 归位过程
+
+\`\`\`
+ hand.home() 执行步骤：
+
+ 1. 发送归位命令 (0x30)
+ 2. 所有舵机移动到 extend_count
+ 3. 等待运动完成（最多10秒）
+ 4. 更新内部位置状态
+
+ 机械运动：
+ - 所有手指从当前位置
+ - 缓慢张开到完全伸直位置
+ - 到达后归位完成
+
+ 目的：建立已知参考位置
+\`\`\`
+
+### 位置控制
+
+\`\`\`
+ set_joint_positions([0, 0, 0, 0, 0, 0, 0])
+           │
+           ▼
+ 数据格式：7个关节的百分比 (0-100)
+           │
+           ▼
+ 关节映射：
+ - [0] 食指弯曲
+ - [1] 中指弯曲
+ - [2] 无名指弯曲
+ - [3] 小指弯曲
+ - [4] 拇指内收
+ - [5] 拇指弯曲
+ - [6] 备用
+
+ 注意：只有6个关节用于主要控制
+\`\`\`
+
+---
+
+## 扩展练习
+
+### 练习 1：自定义手势
+
+\`\`\`python
+# 创建你的手势
+my_gesture = [
+    50,   # 食指 - 中等弯曲
+    0,    # 中指 - 完全伸直
+    100,  # 无名指 - 完全弯曲
+    50,   # 小指 - 中等弯曲
+    70,   # 拇指内收 - 较强内收
+    60,   # 拇指弯曲 - 中等弯曲
+    0     # 备用
+]
+
+hand.set_joint_positions(my_gesture)
+\`\`\`
+
+### 练习 2：平滑过渡
+
+\`\`\`python
+import numpy as np
+
+def smooth_move(hand, start, end, duration=2.0, steps=50):
+    """平滑移动到目标位置"""
+    for i in range(steps):
+        t = i / steps
+        # 余弦插值
+        alpha = (1 - np.cos(np.pi * t)) / 2
+        current = [s + (e - s) * alpha for s, e in zip(start, end)]
+        hand.set_joint_positions(current)
+        time.sleep(duration / steps)
+
+# 使用
+smooth_move(hand, [0,0,0,0,0,0,0], [100,100,100,100,100,100,0], duration=3.0)
+\`\`\`
+
+### 练习 3：连续动作
+
+\`\`\`python
+def wave_motion(hand, cycles=3, speed=0.1):
+    """波动手势"""
+    import numpy as np
+
+    for _ in range(cycles):
+        for t in np.linspace(0, 2*np.pi, 20):
+            positions = [
+                50 + 50 * np.sin(t + i * 0.5)
+                for i in range(6)
+            ]
+            hand.set_joint_positions(positions)
+            time.sleep(speed)
+
+wave_motion(hand, cycles=2, speed=0.05)
+\`\`\`
+
+---
+
+## 下一步
+
+完成首次演示后，你可以：
+
+1. **修改示例代码** - 创建自己的手势
+2. **阅读技术文档** - 深入了解系统架构
+3. **尝试仿真** - 在 MuJoCo 中训练 RL 策略
+4. **组装硬件** - 如果收到散件，开始组装
+        `
+      },
+      {
+        id: 'hardware-assembly-quick',
+        title: '快速组装指南',
+        summary: '简明的组装流程，帮助你快速完成硬件装配。',
+        tags: ['硬件', '组装', '快速'],
+        content: `
+## 组装概述
+
+Aero Hand Open 的组装流程分为 5 个主要阶段：
+
+\`\`\`
+组装流程：
+┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
+│ 电子件  │ →  │ 安装   │ →  │ 手指   │ →  │ 肌腱   │ →  │ 最终  │
+│ 准备   │    │ ESP32  │    │ 组装   │    │ 穿引   │    │ 测试  │
+└─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
+
+预计时间：2-4 小时（取决于经验）
+工具需求：基础螺丝刀套装、镊子、剪钳
+\`\`\`
+
+---
+
+## 阶段 1：电子件准备
+
+### 检查零件
+
+\`\`\`
+电子元件清单：
+□ ESP32-S3 开发板 × 1
+□ HLS3606M 舵机 × 7（已安装在3D打印件中）
+□ USB-C 数据线 × 1
+□ 5V 3A 电源适配器 × 1
+□ 排针若干（用于接线）
+
+3D 打印件清单：
+□ palm_left.stl / palm_right.stl（手掌）
+□ finger_*.stl（4个手指 + 拇指的所有部件）
+□ wrist_mount.stl（腕部安装座）
+□ pulley_*.stl（滑轮组件）
+\`\`\`
+
+### 测试舵机
+
+**重要：先测试舵机再组装！**
+
+\`\`\`python
+# test_servos.py
+from aero_open_sdk import AeroHand
+
+hand = AeroHand()
+
+# 逐个测试舵机
+for servo_id in range(7):
+    print(f"测试舵机 {servo_id}...")
+
+    # 发送测试命令
+    hand.set_joint_position(servo_id, 50)
+    input("按 Enter 继续...")  # 等待手动确认
+
+print("所有舵机测试完成!")
+\`\`\`
+
+---
+
+## 阶段 2：安装 ESP32
+
+### 位置和方向
+
+\`\`\`
+ESP32 安装位置：手掌中心
+
+安装要求：
+- USB 接口朝向腕部方向
+- ESP32 芯片朝向外侧（便于散热）
+- 使用 2× M2.5 螺丝固定
+
+固定点：
+  ┌─────────────────────┐
+  │                     │
+  │    ┌───────┐       │
+  │    │ ESP32 │       │ ← 居中放置
+  │    └───────┘       │
+  │                     │
+  │   ○             ○   │ ← 螺丝孔位
+  │                     │
+  └─────────────────────┘
+\`\`\`
+
+### 接线
+
+\`\`\`
+ESP32 → 舵机总线
+
+接线定义（参考 HandConfig.h）：
+GPIO 18 → 舵机数据线
+GPIO 19 → (备用)
+
+电源：
+- ESP32 5V → 舵机电源 (5V)
+- GND → 共地
+
+注意：确保电源极性正确！
+\`\`\`
+
+---
+
+## 阶段 3：手指组装
+
+### 手指结构
+
+\`\`\`
+单个手指的组件：
+┌───────────┬─────────────┬──────────┐
+│ Proximal  │ Intermediate │  Distal  │
+│ (近端)    │   (中端)     │  (远端)  │
+│           │              │          │
+│ ◯─────◯──│──◯─────◯──│──◯      │
+│ 滑轮     │ 滑轮        │ 滑轮     │
+└───────────┴─────────────┴──────────┘
+
+关节连接：
+- 近端 ↔ 中端：关节销钉
+- 中端 ↔ 远端：关节销钉
+\`\`\`
+
+### 组装步骤
+
+\`\`\`bash
+# 1. 安装滑轮到指骨
+#    - 近端指骨：2个3mm滑轮
+#    - 中端指骨：1个3mm滑轮
+#    - 远端指骨：1个5mm滑轮
+
+# 2. 连接指骨
+#    - 使用关节销钉连接
+#    - 确保运动顺畅，无卡顿
+
+# 3. 重复 4 次（食指、中指、无名指、小指）
+#    - 拇指组装略有不同（见下文）
+\`\`\`
+
+### 拇指组装
+
+\`\`\`
+拇指特点：
+- 位于手掌侧面
+- 有额外的内旋关节
+- 需要单独校准
+
+安装位置：
+     ┌──────────┐
+     │  拇指    │ ← 拇指座
+     └────┬─────┘
+          │
+   ┌─────┴─────┐
+   │  掌骨     │
+   └───────────┘
+\`\`\`
+
+---
+
+## 阶段 4：肌腱穿引
+
+### 肌腱路径
+
+\`\`\`
+肌腱穿引路径（以食指为例）：
+
+1. 起点：掌心底部的肌腱锚点
+   ↓
+2. 近端滑轮（绕过外侧）
+   ↓
+3. 中端滑轮（绕过内侧）
+   ↓
+4. 远端滑轮
+   ↓
+5. 终点：指尖固定点
+
+路径示意图：
+┌─────────────────────────────┐
+│ 锚点 ●                      │
+│      ╲                      │
+│       ╲   ┌─────┐          │
+│        ╲──│滑轮1│          │
+│           └─────┘          │
+│            │               │
+│            ╲              │
+│             ╲   ┌─────┐   │
+│              ╲──│滑轮2│   │
+│                 └─────┘   │
+│                  │        │
+│                  ╲       │
+│                   ╲ ┌───┐│
+│                    ╲│滑轮││
+│                     └───┘│
+│                      ● 终点│
+└─────────────────────────────┘
+\`\`\`
+
+### 穿引技巧
+
+\`\`\`
+技巧1：使用穿引针
+- 购买或自制细长穿引针
+- 先穿针再带线
+
+技巧2：保持肌腱平整
+- 避免扭曲或打结
+- 预留适当余量（约10mm）
+
+技巧3：预紧力调整
+- 太松：手指不能完全弯曲
+- 太紧：手指不能完全伸直
+- 合适：自然下垂时手指半弯曲
+
+技巧4：固定方式
+- 打结 + 少量胶水
+- 或使用微型线夹
+\`\`\`
+
+---
+
+## 阶段 5：最终测试
+
+### 测试清单
+
+\`\`\`
+最终检查清单：
+
+□ 所有螺丝已紧固
+□ 肌腱路径正确
+□ 关节运动顺畅
+□ 无异常摩擦或卡顿
+□ 舵机连接正确
+□ 肌腱张力适中
+□ USB 连接正常
+□ 电源连接正确
+
+功能测试：
+□ 归位功能正常
+□ 所有手指响应控制
+□ 位置精度满足要求
+□ 运动范围正常
+\`\`\`
+
+### 测试脚本
+
+\`\`\`python
+# final_test.py
+from aero_open_sdk import AeroHand
+import time
+
+def final_test():
+    hand = AeroHand()
+    hand.home()
+    time.sleep(1)
+
+    print("执行最终测试...")
+
+    # 测试每个手指
+    for i in range(7):
+        print(f"测试关节 {i}...")
+
+        # 张开
+        hand.set_joint_position(i, 0)
+        time.sleep(0.5)
+
+        # 弯曲
+        hand.set_joint_position(i, 100)
+        time.sleep(0.5)
+
+    # 全开
+    hand.set_joint_positions([0]*7)
+    time.sleep(1)
+
+    # 全闭
+    hand.set_joint_positions([100]*7)
+    time.sleep(1)
+
+    # 复位
+    hand.home()
+    print("测试完成!")
+
+final_test()
+\`\`\`
+
+---
+
+## 常见问题
+
+### Q: 关节运动有异响？
+
+**检查：**
+1. 关节销钉是否润滑
+2. 3D 打印件是否有毛刺
+3. 滑轮是否与指骨摩擦
+
+**解决：**
+- 使用砂纸轻轻打磨毛刺
+- 在关节处添加少量润滑剂
+- 调整滑轮位置
+
+### Q: 肌腱总是松脱？
+
+**原因：**
+1. 打结方式不正确
+2. 胶水粘接力不足
+3. 滑轮边缘磨损肌腱
+
+**解决：**
+- 使用更可靠的结型（如外科结）
+- 使用强力胶（氰基丙烯酸酯）
+- 更换滑轮或用砂纸打磨边缘
+
+### Q: 手指运动方向相反？
+
+**检查：**
+- 舵机方向设置（servo_direction）
+- 固件配置中的方向参数
+
+**解决：**
+- 在 HandConfig.h 中调整方向
+- 或使用 SDK 的方向参数反转
+        `
+      }
+    ]
+  },
+  // ========== 常见错误排查 ==========
+  {
+    id: 'troubleshooting',
+    title: '错误排查',
+    icon: 'Tools',
+    description: '完整的故障诊断和解决方案，帮助你快速定位和解决各类问题',
+    articles: [
+      {
+        id: 'connection-issues',
+        title: '连接问题诊断',
+        summary: '串口连接、固件通信问题的完整诊断流程和解决方案。',
+        tags: ['连接', '串口', '诊断'],
+        content: `
+## 连接问题概览
+
+\`\`\`
+连接问题分类：
+
+┌─────────────────────────────────────────────────────────┐
+│                    连接问题树                            │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   无法连接                                               │
+│   ├─ 硬件问题                                           │
+│   │  ├─ USB 线不支持数据传输                             │
+│   │  ├─ 串口驱动未安装                                   │
+│   │  └─ ESP32 损坏                                       │
+│   │                                                         │
+│   └─ 软件问题                                           │
+│      ├─ 端口被占用                                       │
+│      ├─ 波特率不匹配                                     │
+│      └─ 权限不足                                         │
+│                                                         │
+│   连接不稳定                                             │
+│   ├─ USB 线质量差                                        │
+│   ├─ 供电不足                                           │
+│   └─ 信号干扰                                           │
+│                                                         │
+│   通信超时                                               │
+│   ├─ 固件未运行                                         │
+│   ├─ 串口参数错误                                       │
+│   └─ 程序阻塞                                           │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+\`\`\`
+
+---
+
+## 问题 1：找不到串口设备
+
+### 症状
+
+\`\`\`
+错误信息：
+- "No serial port found"
+- "Port not found: /dev/ttyUSB0"
+- "Could not open port 'COM3'"
+
+可能原因：
+1. USB 线仅供充电，不支持数据
+2. 驱动未安装
+3. 端口名称错误
+\`\`\`
+
+### 诊断步骤
+
+**步骤 1：确认 USB 线**
+
+\`\`\`
+测试方法：
+1. 使用手机数据线（通常支持数据传输）
+2. 连接后电脑应识别到新设备
+3. 观察设备管理器是否有新条目
+
+好的 USB 线特征：
+- 通常更粗
+- 可能有 "数据" 标志
+- 连接到电脑后能识别到设备
+\`\`\`
+
+**步骤 2：检查驱动**
+
+\`\`\`
+Windows 驱动：
+- CH340: https://www.wch.cn/downloads/CH341SER_ZIP.html
+- CP2102: https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers
+
+安装后检查：
+设备管理器 → 端口(COM 和 LPT)
+应该有 "USB Serial Device" 或类似条目
+
+Linux 驱动：
+# CH340 通常内核自带
+lsmod | grep ch341
+
+# 如果没有，加载模块
+sudo modprobe ch341
+\`\`\`
+
+**步骤 3：检查端口权限**
+
+\`\`\`bash
+# Linux 检查
+ls -l /dev/ttyUSB*
+# 或
+ls -l /dev/ttyACM*
+
+# 当前用户权限
+groups $USER
+# 应该包含 dialout 组
+
+# 临时解决方案
+sudo chmod 666 /dev/ttyUSB0
+
+# 永久解决方案
+sudo usermod -a -G dialout $USER
+# 然后重新登录
+\`\`\`
+
+### 解决方案汇总
+
+| 问题 | 解决方案 |
+|------|---------|
+| USB 线不支持数据 | 更换支持数据传输的 USB 线 |
+| CH340 驱动未安装 | 下载并安装 CH341SER |
+| CP2102 驱动未安装 | 下载并安装 CP2102 VCP |
+| Linux 权限不足 | 添加用户到 dialout 组 |
+| Windows 端口被占用 | 关闭其他使用串口的程序 |
+
+---
+
+## 问题 2：连接后无响应
+
+### 症状
+
+\`\`\`
+现象：
+- 串口打开成功
+- 发送命令无反应
+- 读取返回为空或超时
+
+可能原因：
+1. 固件未烧录
+2. 固件损坏
+3. 波特率不匹配
+\`\`\`
+
+### 诊断步骤
+
+**步骤 1：验证固件**
+
+\`\`\`bash
+# 使用 esptool 检查芯片
+pip install esptool
+esptool.py --chip esp32s3 --port /dev/ttyUSB0 flash_id
+
+# 预期输出：
+# Chip type: ESP32-S3
+# Chip features: WiFi/BT/BLE
+# MAC address: ...
+\`\`\`
+
+**步骤 2：检查波特率**
+
+\`\`\`
+常见波特率：9600, 115200, 460800, 921600
+
+Aero Hand 使用：921600
+
+检查方法：
+1. 打开串口监视器（Arduino IDE）
+2. 设置不同波特率
+3. 观察是否有输出
+
+如果看到乱码：波特率不匹配
+\`\`\`
+
+**步骤 3：手动发送心跳**
+
+\`\`\`python
+# 手动测试固件响应
+import serial
+
+port = '/dev/ttyUSB0'  # 或 'COM3'
+baudrate = 921600
+
+with serial.Serial(port, baudrate, timeout=1) as ser:
+    # 发送归位命令 (0x30)
+    ser.write(bytes([0x7E, 0x30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x30, 0x7E]))
+
+    # 读取响应
+    response = ser.read(16)
+    print(f"响应: {response.hex()}")
+
+    if response:
+        print("固件有响应!")
+    else:
+        print("固件无响应 - 可能未烧录固件")
+\`\`\`
+
+### 解决方案
+
+\`\`\`
+方案1：重新烧录固件
+- 使用 PlatformIO 或 Arduino IDE
+- 确保选择正确的开发板 (ESP32-S3)
+- 烧录后重启
+
+方案2：检查波特率配置
+- SDK 默认 921600
+- 如需更改，同时修改固件和 SDK
+
+方案3：检查供电
+- ESP32 需要稳定供电
+- USB 供电可能不足，使用外部 5V 电源
+\`\`\`
+
+---
+
+## 问题 3：通信不稳定
+
+### 症状
+
+\`\`\`
+现象：
+- 偶发性通信失败
+- 数据校验错误
+- 命令丢失
+
+可能原因：
+1. USB 线过长或质量差
+2. 供电不稳定
+3. 信号干扰
+\`\`\`
+
+### 诊断方法
+
+**方法 1：检查信号质量**
+
+\`\`\`
+示波器观察：
+- 检查 TX/RX 信号完整性
+- 确认电平正确（3.3V）
+- 检查是否有噪声
+
+逻辑分析仪观察：
+- 采样率 ≥ 10MHz
+- 捕获串口数据
+- 分析时序是否正确
+\`\`\`
+
+**方法 2：检查供电**
+
+\`\`\`
+万用表测量：
+- USB 供电电压：5V ± 0.25V
+- ESP32 供电电压：3.3V
+- 舵机供电电压：5V ± 0.25V
+
+问题症状：
+- 电压偏低 → 供电不足
+- 电压波动 → 电源噪声
+\`\`\`
+
+### 解决方案
+
+| 问题 | 解决方案 |
+|------|---------|
+| USB 线过长 | 使用更短的 USB 线（< 1米） |
+| USB 供电不足 | 使用带独立供电的 USB Hub |
+| 信号干扰 | 添加磁环，使用屏蔽线 |
+| 串口缓冲区溢出 | 降低发送频率，添加延时 |
+| 校验和错误 | 检查波特率是否精确匹配 |
+
+---
+
+## 问题 4：舵机不响应
+
+### 症状
+
+\`\`\`
+现象：
+- ESP32 连接正常
+- 舵机不动
+- 无错误提示
+
+可能原因：
+1. 舵机供电未连接
+2. 舵机 ID 配置错误
+3. 舵机损坏
+\`\`\`
+
+### 诊断步骤
+
+**步骤 1：检查供电**
+
+\`\`\`
+必须检查：
+1. 5V 3A 电源是否连接
+2. 电源开关是否打开（如果有）
+3. 舵机电源线是否正确连接
+
+警告：舵机需要独立供电，不能仅靠 USB 供电！
+\`\`\`
+
+**步骤 2：测试单个舵机**
+
+\`\`\`python
+# 测试单个舵机
+from aero_open_sdk import AeroHand
+
+hand = AeroHand()
+
+# 测试舵机 0
+print("测试舵机 0...")
+hand.set_joint_position(0, 50)
+
+# 等待几秒
+import time
+time.sleep(2)
+
+# 检查是否有反应
+# 如果舵机不动，尝试
+print("尝试其他位置...")
+hand.set_joint_position(0, 0)
+time.sleep(1)
+hand.set_joint_position(0, 100)
+\`\`\`
+
+**步骤 3：检查总线连接**
+
+\`\`\`
+舵机总线拓扑：
+┌─────────────┐
+│   ESP32    │
+│  TX →      │
+└──────┬──────┘
+       │
+       ├─────────────────┐
+       │                 │
+       ▼                 ▼
+   ┌───────┐         ┌───────┐
+   │舵机 0 │         │舵机 1 │
+   └───────┘         └───────┘
+       │                 │
+       ▼                 ▼
+   ┌───────┐         ┌───────┐
+   │舵机 2 │         │舵机 3 │ ...
+   └───────┘         └───────┘
+
+注意：最后一个舵机应接终端电阻（120Ω）
+\`\`\`
+
+### 解决方案
+
+| 问题 | 解决方案 |
+|------|---------|
+| 舵机供电未连接 | 连接 5V 3A 电源 |
+| 舵机 ID 冲突 | 检查 HandConfig.h 中 ID 配置 |
+| 终端电阻缺失 | 在最后一个舵机添加 120Ω 电阻 |
+| 舵机损坏 | 更换舵机（联系供应商） |
+| 总线断路 | 检查接线，重新焊接 |
+
+---
+
+## 高级诊断工具
+
+### 串口监视器
+
+\`\`\`bash
+# 使用 screen 或 minicom
+sudo apt install screen
+
+# 连接
+screen /dev/ttyUSB0 921600
+
+# 退出：按 Ctrl+A 然后按 K
+\`\`\`
+
+### 逻辑分析仪
+
+\`\`\`
+推荐工具：Saleae Logic
+采样率：至少 10MHz
+
+接线：
+- 通道 0: ESP32 TX
+- 通道 1: ESP32 RX
+- 通道 2: 舵机总线（可选）
+
+分析：
+1. 捕获通信数据
+2. 验证帧格式
+3. 检查时序参数
+\`\`\`
+
+### 示波器
+
+\`\`\`
+检查点：
+1. ESP32 TX 信号完整性
+2. 舵机控制信号
+3. 电源纹波
+
+正常信号特征：
+- 干净的方波
+- 上升/下降时间 < 1μs
+- 无明显噪声
+\`\`\`
+        `
+      },
+      {
+        id: 'motion-problems',
+        title: '运动异常排查',
+        summary: '手指运动不平滑、抖动、位置不准确等问题的诊断和解决。',
+        tags: ['运动', '舵机', '调试'],
+        content: `
+## 运动问题概览
+
+\`\`\`
+运动问题分类：
+
+┌─────────────────────────────────────────────────────────┐
+│                  运动问题诊断树                          │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   手指不动                                               │
+│   ├─ 舵机问题                                           │
+│   │  ├─ 供电不足                                        │
+│   │  ├─ 舵机损坏                                        │
+│   │  └─ ID 配置错误                                     │
+│   │                                                         │
+│   └─ 机械问题                                           │
+│      ├─ 肌腱断裂                                        │
+│      ├─ 关节卡住                                        │
+│      └─ 滑轮脱落                                        │
+│                                                         │
+│   运动不平滑                                             │
+│   ├─ 控制频率不当                                       │
+│   ├─ 命令间隔不均匀                                     │
+│   └─ 肌腱张力问题                                       │
+│                                                         │
+│   位置不准确                                             │
+│   ├─ 端点配置错误                                       │
+│   ├─ 肌腱打滑                                           │
+│   └─ 负载过大                                           │
+│                                                         │
+│   抖动/振荡                                             │
+│   ├─ 肌腱太松                                           │
+│   ├─ PID 参数不当                                       │
+│   └─ 控制信号干扰                                       │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+\`\`\`
+
+---
+
+## 问题 1：手指完全不动
+
+### 诊断流程
+
+\`\`\`
+检查顺序（按优先级）：
+
+1. 供电检查
+   └─→ 5V 3A 电源是否连接？
+   └─→ 电源开关是否打开？
+
+2. 连接检查
+   └─→ 舵机总线是否连接？
+   └─→ 尝试单独测试一个舵机
+
+3. 机械检查
+   └─→ 手动弯曲手指是否有阻力？
+   └─→ 肌腱是否可见断裂？
+
+4. 舵机检查
+   └─→ 听是否有嗡嗡声（供电但卡住）
+   └─→ 闻是否有焦味（可能损坏）
+\`\`\`
+
+### 具体诊断
+
+**诊断：手动测试**
+
+\`\`\`
+方法：
+1. 断开舵机电源（或关闭总电源）
+2. 手动弯曲手指
+3. 感受阻力
+
+结果分析：
+- 有阻力 → 机械正常，问题在舵机/控制
+- 无阻力 → 肌腱可能断裂或脱落
+- 卡顿感 → 关节或滑轮问题
+\`\`\`
+
+**诊断：听舵机声音**
+
+\`\`\`
+正常声音：
+- 通电时：轻微的嗡嗡声（~1秒）
+- 运动时：电机运转声
+- 到位后：安静
+
+异常声音：
+- 持续的滋滋声 → 可能堵转
+- 咔嗒声 → 齿轮打滑
+- 完全安静 → 舵机未通电或损坏
+\`\`\`
+
+### 解决方案
+
+| 症状 | 可能原因 | 解决方案 |
+|------|----------|----------|
+| 手动弯曲无阻力 | 肌腱断裂/脱落 | 重新穿引肌腱 |
+| 通电后舵机嗡嗡响但不动 | 堵转或负载过大 | 检查机械干涉 |
+| 通电后完全安静 | 供电或舵机损坏 | 检查供电/更换舵机 |
+| 部分手指不动 | 总线连接问题 | 检查接线 |
+
+---
+
+## 问题 2：运动不平滑
+
+### 原因分析
+
+\`\`\`
+不平滑的可能原因：
+
+1. 控制频率问题
+   - 频率太低 → 步进运动
+   - 频率太高 → 命令堆积
+
+2. 命令间隔不均匀
+   - 使用 sleep() 导致间隔不稳定
+   - 计算导致的延迟
+
+3. 肌腱问题
+   - 张力不均匀
+   - 滑轮摩擦
+
+4. 目标位置变化过大
+   - 跳跃式命令
+\`\`\`
+
+### 诊断方法
+
+**方法：记录运动轨迹**
+
+\`\`\`python
+# motion_logger.py
+from aero_open_sdk import AeroHand
+import time
+
+hand = AeroHand()
+hand.home()
+
+# 记录位置变化
+positions = []
+
+for i in range(100):
+    hand.set_joint_positions([50]*7)
+    current = hand.get_joint_positions()
+    positions.append(current)
+    time.sleep(0.05)  # 固定间隔
+
+# 分析
+import numpy as np
+positions = np.array(positions)
+
+for i in range(7):
+    diffs = np.diff(positions[:, i])
+    print(f"关节 {i}: 平均变化={diffs.mean():.2f}, 标准差={diffs.std():.2f}")
+
+# 标准差大 = 运动不平滑
+\`\`\`
+
+### 解决方案
+
+**方案 1：增加控制频率**
+
+\`\`\`python
+# 优化前
+for pos in target_positions:
+    hand.set_joint_positions(pos)
+    time.sleep(0.1)  # 10Hz
+
+# 优化后
+for pos in target_positions:
+    hand.set_joint_positions(pos)
+    time.sleep(0.02)  # 50Hz
+\`\`\`
+
+**方案 2：使用定时器**
+
+\`\`\`python
+import threading
+import time
+
+class PeriodicController:
+    def __init__(self, hand, period=0.05):
+        self.hand = hand
+        self.period = period
+        self.running = False
+        self.target = [0]*7
+
+    def start(self):
+        self.running = True
+        self.thread = threading.Thread(target=self._loop)
+        self.thread.start()
+
+    def _loop(self):
+        last_time = time.perf_counter()
+        while self.running:
+            current_time = time.perf_counter()
+            elapsed = current_time - last_time
+
+            if elapsed >= self.period:
+                self.hand.set_joint_positions(self.target)
+                last_time = current_time
+
+            time.sleep(0.001)  # 避免忙等待
+
+    def set_target(self, target):
+        self.target = target
+
+    def stop(self):
+        self.running = False
+\`\`\`
+
+**方案 3：平滑轨迹插值**
+
+\`\`\`python
+import numpy as np
+
+def smooth_interpolation(start, end, steps=50):
+    """生成平滑轨迹"""
+    t = np.linspace(0, np.pi, steps)
+    # 余弦插值
+    trajectory = start + (end - start) * (1 - np.cos(t)) / 2
+    return trajectory
+
+# 使用
+hand = AeroHand()
+
+start = [0, 0, 0, 0, 0, 0, 0]
+end = [100, 100, 100, 100, 100, 100, 0]
+
+for pos in smooth_interpolation(start, end, steps=50):
+    hand.set_joint_positions(pos)
+    time.sleep(0.03)
+\`\`\`
+
+---
+
+## 问题 3：位置不准确
+
+### 原因分析
+
+\`\`\`
+位置误差来源：
+
+1. 端点配置错误
+   - extend_count / grasp_count 不准确
+   - 每个舵机配置不同
+
+2. 机械问题
+   - 肌腱打滑
+   - 关节松动
+   - 负载变化
+
+3. 通信问题
+   - 命令丢失
+   - 校验错误
+
+4. 物理特性
+   - 温度漂移
+   - 弹性变形
+\`\`\`
+
+### 诊断方法
+
+**方法：校准测试**
+
+\`\`\`python
+# calibration_test.py
+from aero_open_sdk import AeroHand
+import time
+
+hand = AeroHand()
+
+print("校准测试...")
+print("=" * 50)
+
+for target in [0, 25, 50, 75, 100]:
+    print(f"\\n目标位置: {target}%")
+
+    hand.set_joint_positions([target]*7)
+    time.sleep(1.5)  # 等待稳定
+
+    actual = hand.get_joint_positions()
+    error = [abs(t - a) for t, a in zip([target]*7, actual)]
+
+    print(f"实际位置: {actual}")
+    print(f"误差: {error}")
+
+print("=" * 50)
+\`\`\`
+
+### 解决方案
+
+**方案 1：重新配置端点**
+
+\`\`\`python
+# 手动配置端点
+hand = AeroHand()
+
+# 获取当前配置
+print(f"当前 grasp_count: {hand.servos[0].grasp_count}")
+print(f"当前 extend_count: {hand.servos[0].extend_count}")
+
+# 修改配置
+hand.servos[0].grasp_count = 3500  # 闭合端点
+hand.servos[0].extend_count = 500  # 张开端点
+
+# 保存到 EEPROM
+hand.save_configuration()
+\`\`\`
+
+**方案 2：添加误差补偿**
+
+\`\`\`python
+class CalibratedHand:
+    """带误差补偿的手控制"""
+
+    def __init__(self, hand):
+        self.hand = hand
+        # 校准偏移量（通过测试获得）
+        self.calibration = {
+            0: -2,  # 关节 0 偏移 -2%
+            1: 1,   # 关节 1 偏移 +1%
+            # ...
+        }
+
+    def set_joint_positions(self, positions):
+        calibrated = [
+            pos + self.calibration.get(i, 0)
+            for i, pos in enumerate(positions)
+        ]
+        # 限制范围
+        calibrated = [max(0, min(100, p)) for p in calibrated]
+        self.hand.set_joint_positions(calibrated)
+\`\`\`
+
+---
+
+## 问题 4：抖动和振荡
+
+### 原因分析
+
+\`\`\`
+抖动的原因：
+
+1. 控制信号问题
+   - 肌腱太松
+   - 控制信号干扰
+   - 电源噪声
+
+2. PID 参数问题
+   - P 太大 → 振荡
+   - I 太大 → 积分饱和
+   - D 太小 → 阻尼不足
+
+3. 机械问题
+   - 关节摩擦不均匀
+   - 滑轮不平衡
+\`\`\`
+
+### 诊断方法
+
+**方法：观察抖动模式**
+
+\`\`\`
+抖动类型分析：
+
+1. 高频微抖动（~数Hz）
+   → 通常是控制信号问题或肌腱过松
+
+2. 低频大幅度振荡（~1Hz）
+   → PID 参数不当
+
+3. 不规则抖动
+   → 可能是机械干涉或障碍物
+\`\`\`
+
+### 解决方案
+
+**方案 1：调整肌腱张力**
+
+\`\`\`
+检查方法：
+- 手指自然下垂时应该微弯
+- 太快回弹 → 张力过大
+- 缓慢下落 → 张力过松
+
+调整：
+1. 找到肌腱调整点
+2. 增加/减少预紧力
+3. 重新测试
+\`\`\`
+
+**方案 2：添加低通滤波**
+
+\`\`\`python
+class FilteredHand:
+    """带滤波的手控制"""
+
+    def __init__(self, hand, alpha=0.7):
+        self.hand = hand
+        self.alpha = alpha  # 滤波系数 (0-1)
+        self.last_positions = None
+
+    def set_joint_positions(self, positions):
+        if self.last_positions is None:
+            self.last_positions = positions
+        else:
+            # 指数移动平均
+            filtered = [
+                self.alpha * new + (1 - self.alpha) * old
+                for new, old in zip(positions, self.last_positions)
+            ]
+            self.last_positions = filtered
+            self.hand.set_joint_positions(filtered)
+\`\`\`
+
+**方案 3：降低控制增益**
+
+\`\`\`python
+class SoftHand:
+    """软控制模式 - 减少抖动"""
+
+    def __init__(self, hand):
+        self.hand = hand
+        self.gain = 0.5  # 降低增益
+
+    def set_joint_positions(self, target):
+        current = self.hand.get_joint_positions()
+
+        # 渐进式移动
+        new_positions = [
+            curr + self.gain * (tgt - curr)
+            for curr, tgt in zip(current, target)
+        ]
+
+        self.hand.set_joint_positions(new_positions)
+\`\`\`
+        `
+      },
+      {
+        id: 'sim2real-issues',
+        title: 'Sim2Real 问题排查',
+        summary: '仿真到实物转移过程中的常见问题，包括域差距、性能调优等。',
+        tags: ['Sim2Real', '仿真', 'RL'],
+        content: `
+## Sim2Real 问题概览
+
+\`\`\`
+Sim2Real 挑战分类：
+
+┌─────────────────────────────────────────────────────────┐
+│                 Sim2Real 问题地图                        │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   域差距 (Domain Gap)                                   │
+│   ├─ 物理参数差异                                       │
+│   │  ├─ 质量/惯性                                       │
+│   │  ├─ 摩擦系数                                        │
+│   │  ├─ 关节阻尼                                        │
+│   │  └─ 肌腱刚度                                        │
+│   │                                                         │
+│   └─ 观测差异                                           │
+│      ├─ 传感器噪声                                      │
+│      ├─ 延迟差异                                        │
+│      └─ 视角/光照                                       │
+│                                                         │
+│   性能差距                                              │
+│   ├─ 训练成功率高，部署成功率低                         │
+│   ├─ 仿真动作流畅，真实动作抖动                         │
+│   └─ 位置精度差                                         │
+│                                                         │
+│   训练问题                                              │
+│   ├─ 训练不收敛                                        │
+│   ├─ 策略崩溃                                           │
+│   └─ 奖励异常                                           │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+\`\`\`
+
+---
+
+## 问题 1：训练不收敛
+
+### 症状
+
+\`\`\`
+现象：
+- 奖励曲线平坦
+- 损失不下降
+- 策略不学习
+
+可能原因：
+1. 奖励函数设计不当
+2. 动作/观测空间错误
+3. 学习率问题
+4. 环境随机化不足
+\`\`\`
+
+### 诊断方法
+
+**方法：检查奖励曲线**
+
+\`\`\`python
+# 监控训练
+import wandb
+
+wandb.init(project="aero-hand")
+
+for iteration in range(num_iterations):
+    # 训练...
+    reward = evaluate(env, policy)
+
+    wandb.log({
+        "iteration": iteration,
+        "reward": reward,
+        "policy_loss": loss,
+        "entropy": entropy,
+    })
+
+# 查看 wandb 仪表板
+# 正常曲线应该是上升的
+\`\`\`
+
+**方法：验证环境**
+
+\`\`\`python
+# test_env.py
+env = AeroGraspEnv()
+
+# 测试随机动作
+obs, _ = env.reset()
+for _ in range(100):
+    action = env.action_space.sample()  # 随机动作
+    obs, reward, done, _, info = env.step(action)
+
+    print(f"Reward: {reward:.3f}, Done: {done}")
+
+    if done:
+        obs, _ = env.reset()
+
+# 检查奖励是否合理
+# 随机动作应该得到接近0的奖励
+\`\`\`
+
+### 解决方案
+
+**方案 1：检查奖励函数**
+
+\`\`\`python
+# 奖励函数设计原则：
+# 1. 有梯度的奖励（稀疏奖励难以学习）
+# 2. 有界的奖励（避免数值爆炸）
+# 3. 合理的缩放
+
+# 好的奖励函数示例：
+def compute_reward(self):
+    reward = 0.0
+
+    # 进度奖励（强）
+    progress = self.target_angle - self.current_angle
+    reward += -progress * 0.1
+
+    # 接触奖励（中）
+    if self.check_contact():
+        reward += 0.5
+
+    # 成功奖励（强但稀疏）
+    if abs(progress) < 0.1:
+        reward += 10.0
+
+    # 动作惩罚（弱）
+    reward -= 0.01 * np.sum(np.square(self.action))
+
+    return reward
+\`\`\`
+
+**方案 2：调整学习率**
+
+\`\`\`python
+# 学习率调度
+config = {
+    "learning_rate": 3e-4,      # 初始学习率
+    "lr_decay": 0.98,           # 每轮衰减
+    "min_lr": 1e-5,             # 最低学习率
+}
+
+# 或使用 warmup
+def lr_lambda(step):
+    if step < 1000:
+        return step / 1000  # 线性 warmup
+    return 1.0  # 恒定
+\`\`\`
+
+---
+
+## 问题 2：Sim2Real 性能差距
+
+### 症状
+
+\`\`\`
+现象：
+- 仿真中成功率 90%+
+- 真实部署成功率 < 50%
+- 动作在仿真中流畅，真实中抖动
+
+可能原因：
+1. 物理参数不匹配
+2. 执行延迟差异
+3. 观测噪声差异
+4. 控制频率差异
+\`\`\`
+
+### 诊断方法
+
+**方法：比较响应曲线**
+
+\`\`\`python
+# sim_vs_real.py
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 仿真响应
+sim_time = []
+sim_positions = []
+
+# 真实响应
+real_time = []
+real_positions = []
+
+# 施加相同动作，观察响应差异
+test_action = [50, 50, 50, 50, 50, 50, 50]
+
+# 仿真中
+for t in range(100):
+    sim_positions.append(get_sim_position(t))
+    sim_time.append(t * 0.05)
+
+# 真实中
+for t in range(100):
+    real_positions.append(get_real_position(t))
+    real_time.append(t * 0.05)
+
+# 绘图比较
+plt.figure(figsize=(12, 6))
+plt.subplot(1, 2, 1)
+plt.plot(sim_time, sim_positions, label='Simulation')
+plt.plot(real_time, real_positions, label='Real')
+plt.xlabel('Time (s)')
+plt.ylabel('Position (%)')
+plt.legend()
+plt.title('Response Comparison')
+
+plt.subplot(1, 2, 2)
+gap = np.array(sim_positions) - np.array(real_positions)
+plt.plot(sim_time, gap)
+plt.xlabel('Time (s)')
+plt.ylabel('Error')
+plt.title('Sim2Real Gap')
+plt.show()
+
+print(f"Average gap: {np.mean(np.abs(gap)):.2f}")
+\`\`\`
+
+### 解决方案
+
+**方案 1：域随机化**
+
+\`\`\`python
+# domain_randomization.py
+class RandomizableEnv:
+    def __init__(self):
+        self.base_params = {
+            "tendon_stiffness": 1000.0,
+            "joint_damping": 0.1,
+            "friction": 0.8,
+        }
+
+    def randomize(self):
+        """随机化物理参数"""
+        self.tendon_stiffness = self.base_params["tendon_stiffness"] * np.random.uniform(0.8, 1.2)
+        self.joint_damping = self.base_params["joint_damping"] * np.random.uniform(0.5, 1.5)
+        self.friction = self.base_params["friction"] * np.random.uniform(0.7, 1.3)
+
+    def reset(self):
+        self.randomize()  # 每次重置时随机化
+        return self._get_obs()
+\`\`\`
+
+**方案 2：系统辨识**
+
+\`\`\`python
+# system_identification.py
+"""
+步骤：
+1. 在仿真中对每个参数进行扫描
+2. 在真实硬件上进行相同测试
+3. 找到使两者匹配的参数
+
+参数扫描范围：
+- tendon_stiffness: [500, 2000]
+- joint_damping: [0.01, 1.0]
+- actuator_delay: [0.001, 0.1]  # 秒
+- sensor_noise: [0.0, 0.1]
+"""
+
+# 使用优化算法找到最佳参数
+from scipy.optimize import minimize
+
+def objective(params):
+    stiffness, damping, delay = params
+
+    # 仿真响应
+    sim_response = simulate(stiffness, damping, delay)
+
+    # 真实响应
+    real_response = get_real_response()
+
+    # 计算误差
+    error = np.sum((sim_response - real_response) ** 2)
+    return error
+
+# 优化
+result = minimize(
+    objective,
+    x0=[1000, 0.1, 0.02],
+    bounds=[(500, 2000), (0.01, 1.0), (0.001, 0.1)],
+    method='L-BFGS-B'
+)
+
+print(f"Best params: {result.x}")
+\`\`\`
+
+**方案 3：延迟补偿**
+
+\`\`\`python
+# latency_compensation.py
+class LatencyCompensatedController:
+    def __init__(self, hand, latency=0.05):
+        self.hand = hand
+        self.latency = latency  # 估计的延迟（秒）
+        self.position_buffer = []
+        self.time_buffer = []
+
+    def predict_position(self):
+        """预测延迟后的位置"""
+        if len(self.position_buffer) < 3:
+            return self.position_buffer[-1] if self.position_buffer else [50]*7
+
+        # 线性外推
+        dt = self.time_buffer[-1] - self.time_buffer[-2]
+        vel = (self.position_buffer[-1] - self.position_buffer[-2]) / dt
+
+        # 预测
+        predicted = self.position_buffer[-1] + vel * self.latency
+        return predicted.tolist()
+
+    def set_joint_positions(self, target):
+        self.position_buffer.append(target)
+        self.time_buffer.append(time.time())
+
+        # 使用预测位置
+        predicted = self.predict_position()
+        self.hand.set_joint_positions(predicted)
+\`\`\`
+
+---
+
+## 问题 3：策略崩溃
+
+### 症状
+
+\`\`\`
+现象：
+- 训练中途策略突然变差
+- 损失突然爆炸
+- 动作值超出范围
+
+可能原因：
+1. 学习率过大
+2. 梯度爆炸
+3. 经验回放缓冲区问题
+4. 奖励函数问题
+\`\`\`
+
+### 诊断方法
+
+**方法：监控梯度**
+
+\`\`\`python
+# 梯度监控
+for batch in dataloader:
+    loss = compute_loss(batch)
+
+    # 反向传播
+    loss.backward()
+
+    # 检查梯度
+    total_norm = 0
+    for p in model.parameters():
+        if p.grad is not None:
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+    total_norm = total_norm ** 0.5
+
+    print(f"Gradient norm: {total_norm:.2f}")
+
+    if total_norm > 10.0:  # 阈值
+        print("WARNING: Gradient explosion!")
+
+    optimizer.step()
+    optimizer.zero_grad()
+\`\`\`
+
+### 解决方案
+
+**方案 1：梯度裁剪**
+
+\`\`\`python
+# PPO 中的梯度裁剪
+config = {
+    "max_grad_norm": 0.5,  # 梯度裁剪阈值
+}
+
+# 训练循环中
+for batch in dataloader:
+    loss = compute_loss(batch)
+    loss.backward()
+
+    # 裁剪梯度
+    torch.nn.utils.clip_grad_norm_(
+        model.parameters(),
+        max_norm=config["max_grad_norm"]
+    )
+
+    optimizer.step()
+    optimizer.zero_grad()
+\`\`\`
+
+**方案 2：学习率衰减**
+
+\`\`\`python
+# 学习率调度器
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer,
+    mode='min',
+    factor=0.5,
+    patience=10,
+    min_lr=1e-6
+)
+
+# 或使用余弦退火
+scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+    optimizer,
+    T_0=1000,
+    T_mult=2
+)
+\`\`\`
+
+**方案 3：奖励裁剪**
+
+\`\`\`python
+# 奖励裁剪
+def compute_reward(self):
+    reward = self._compute_raw_reward()
+
+    # 裁剪奖励
+    reward = np.clip(reward, -10.0, 10.0)
+
+    return reward
+\`\`\`
+        `
+      }
+    ]
+  },
+  // ========== 性能调优实战 ==========
+  {
+    id: 'performanceTuning',
+    title: '性能调优',
+    icon: 'DataAnalysis',
+    description: '系统性能优化实战指南，包括控制优化、仿真加速和资源利用',
+    articles: [
+      {
+        id: 'control-optimization',
+        title: '控制性能优化',
+        summary: '提升舵机控制响应速度和控制精度的实用技巧。',
+        tags: ['控制', '优化', '舵机'],
+        content: `
+## 控制性能优化概述
+
+\`\`\`
+优化目标：
+├─ 响应速度：命令到运动的时间
+├─ 控制精度：实际位置与目标位置的误差
+├─ 运动平滑度：加速度/加加速度
+└─ 稳定性：抗干扰能力
+
+典型瓶颈：
+1. 通信延迟 (~1ms)
+2. 舵机响应时间 (~20-50ms)
+3. 机械惯性
+4. 控制频率不足
+\`\`\`
+
+---
+
+## 优化 1：批量命令
+
+### 问题背景
+
+\`\`\`
+默认情况下，我们逐个发送舵机命令：
+
+# 低效方式
+for i in range(7):
+    hand.set_joint_position(i, positions[i])
+    time.sleep(0.01)
+
+问题：
+- 每舵机 ~1ms 通信时间
+- 总共 ~7ms（可以合并）
+- 控制不同步
+\`\`\`
+
+### 优化实现
+
+\`\`\`python
+# 高效方式：一次性发送所有位置
+hand.set_joint_positions(positions)  # 一次发送
+time.sleep(0.05)  # 等待响应
+
+# 通信时间对比：
+# 逐个发送：7舵机 × 1ms = 7ms
+# 批量发送：1次 × 1ms = 1ms
+# 效率提升：7倍
+\`\`\`
+
+### 批量命令协议
+
+\`\`\`
+批量命令帧格式：
+
+字节： 0     1      2-13          14      15
+       │     │      │             │       │
+       ▼     ▼      ▼             ▼       ▼
+    ┌─────┬────┬─────────────┬────────┬────┐
+    │0x7E │0x01│D0 D1...D11 │ CHECK  │0x7E│
+    └─────┴────┴─────────────┴────────┴────┘
+
+D0-D1: 舵机0位置 (ID + 16位位置)
+D2-D3: 舵机1位置
+D4-D5: 舵机2位置
+D6-D7: 舵机3位置
+D8-D9: 舵机4位置
+D10-D11: 舵机5位置
+
+优势：
+- 一次通信控制所有舵机
+- 确保同步性
+- 减少总线冲突
+\`\`\`
+
+---
+
+## 优化 2：预测控制
+
+### 原理
+
+\`\`\`
+预测控制原理：
+
+基于历史数据预测未来状态，提前发出命令
+
+时间线：
+─────────────────────────────────────────────────────→
+        │                │                │
+     当前时刻         预测时刻         目标时刻
+        │                │                │
+        ▼                ▼                ▼
+     读取位置 ───→ 预测位置 ───→ 发送命令
+     (延迟)        (提前)         (补偿)
+
+优势：
+- 补偿固有的通信延迟
+- 减少跟踪误差
+\`\`\`
+
+### 实现代码
+
+\`\`\`python
+class PredictiveController:
+    def __init__(self, hand, horizon=2):
+        self.hand = hand
+        self.horizon = horizon  # 预测步数
+        self.history = []
+
+    def update(self, target_positions):
+        # 记录历史
+        current = self.hand.get_joint_positions()
+        self.history.append(current)
+
+        if len(self.history) > 10:
+            self.history.pop(0)
+
+        # 计算速度和加速度
+        if len(self.history) >= 3:
+            vel = (self.history[-1] - self.history[-2])
+            acc = (self.history[-1] - 2*self.history[-2] + self.history[-3])
+
+            # 预测
+            predicted = [
+                curr + v * self.horizon + 0.5 * a * self.horizon**2
+                for curr, v, a in zip(self.history[-1], vel, acc)
+            ]
+
+            # 限制范围
+            predicted = [max(0, min(100, p)) for p in predicted]
+        else:
+            predicted = target_positions
+
+        # 组合目标与预测
+        alpha = 0.5  # 预测权重
+        command = [
+            alpha * t + (1 - alpha) * p
+            for t, p in zip(target_positions, predicted)
+        ]
+
+        self.hand.set_joint_positions(command)
+\`\`\`
+
+---
+
+## 优化 3：自适应控制
+
+### 原理
+
+\`\`\`
+自适应控制：根据负载动态调整控制参数
+
+场景：
+- 空载时：响应快，刚度低
+- 重载时：响应慢，刚度高
+
+优势：
+- 节能
+- 减少机械磨损
+- 适应不同任务
+\`\`\`
+
+### 实现代码
+
+\`\`\`python
+class AdaptiveController:
+    def __init__(self, hand):
+        self.hand = hand
+        self.load_history = []
+        self.gain = 1.0
+
+    def update(self, target_positions):
+        # 读取当前负载
+        loads = self.hand.get_joint_loads()
+        self.load_history.append(loads)
+
+        if len(self.load_history) > 10:
+            self.load_history.pop(0)
+
+        # 计算平均负载
+        avg_load = np.mean(self.load_history, axis=0)
+
+        # 动态调整增益
+        # 负载大时减小增益（避免过冲）
+        # 负载小时增大增益（提高响应）
+        self.gain = np.clip(1.0 - avg_load / 2000, 0.3, 1.0)
+
+        # 获取当前位置
+        current = self.hand.get_joint_positions()
+
+        # 渐进式移动
+        command = [
+            curr + self.gain * (tgt - curr)
+            for curr, tgt in zip(current, target_positions)
+        ]
+
+        self.hand.set_joint_positions(command)
+
+# 使用
+controller = AdaptiveController(hand)
+
+for target in targets:
+    controller.update(target)
+    time.sleep(0.05)
+\`\`\`
+
+---
+
+## 优化 4：平滑轨迹
+
+### 轨迹类型
+
+\`\`\`
+轨迹类型对比：
+
+1. 线性轨迹（最常用）
+   - 简单实现
+   - 速度恒定
+   - 加速度不连续（冲击）
+
+2. 余弦轨迹
+   - 平滑起止
+   - 速度连续
+   - 加速度连续
+
+3. 多项式轨迹
+   - 最平滑
+   - 可控制速度和加速度
+   - 计算复杂
+
+4. 梯形速度轨迹
+   - 有匀速段
+   - 启停平滑
+   - 适合长距离运动
+\`\`\`
+
+### 实现代码
+
+\`\`\`python
+import numpy as np
+
+class TrajectoryGenerator:
+    """轨迹生成器"""
+
+    @staticmethod
+    def linear(start, end, steps):
+        """线性轨迹"""
+        t = np.linspace(0, 1, steps)
+        trajectory = [start + (end - start) * tt for tt in t]
+        return trajectory
+
+    @staticmethod
+    def cosine(start, end, steps):
+        """余弦轨迹"""
+        t = np.linspace(0, np.pi, steps)
+        trajectory = [start + (end - start) * (1 - np.cos(tt)) / 2 for tt in t]
+        return trajectory
+
+    @staticmethod
+    def trapezoidal(start, end, steps, ramp_ratio=0.2):
+        """梯形速度轨迹"""
+        # ramp_ratio: 加速/减速段占总时间的比例
+        ramp_steps = int(steps * ramp_ratio)
+        cruise_steps = steps - 2 * ramp_steps
+
+        trajectory = []
+
+        # 加速段（线性）
+        for i in range(ramp_steps):
+            t = i / ramp_steps
+            pos = start + (end - start) * t * ramp_ratio
+            trajectory.append(pos)
+
+        # 匀速段
+        for i in range(cruise_steps):
+            t = ramp_ratio + (1 - 2 * ramp_ratio) * i / cruise_steps
+            pos = start + (end - start) * t
+            trajectory.append(pos)
+
+        # 减速段（线性）
+        for i in range(ramp_steps):
+            t = (ramp_steps - i) / ramp_steps
+            pos = start + (end - start) * (1 - (1 - t) * ramp_ratio)
+            trajectory.append(pos)
+
+        return trajectory
+
+# 使用
+gen = TrajectoryGenerator()
+
+start = [0, 0, 0, 0, 0, 0, 0]
+end = [100, 100, 100, 100, 100, 100, 0]
+
+# 生成轨迹
+trajectory = TrajectoryGenerator.cosine(start, end, steps=100)
+
+# 执行
+for pos in trajectory:
+    hand.set_joint_positions(pos)
+    time.sleep(0.02)
+\`\`\`
+
+---
+
+## 优化 5：通信压缩
+
+### 原理
+
+\`\`\`
+通信压缩策略：
+
+1. 增量更新
+   - 只发送变化的舵机
+   - 减少数据量
+
+2. 阈值过滤
+   - 变化小于阈值时不发送
+   - 减少不必要的通信
+
+3. 预测+校正
+   - 发送预测值
+   - 接收端校正误差
+\`\`\`
+
+### 实现代码
+
+\`\`\`python
+class CompressedController:
+    def __init__(self, hand, threshold=2.0):
+        self.hand = hand
+        self.threshold = threshold  # 变化阈值 (%)
+        self.last_sent = None
+
+    def update(self, target_positions):
+        if self.last_sent is None:
+            self.last_sent = target_positions
+            self.hand.set_joint_positions(target_positions)
+            return
+
+        # 找出需要更新的舵机
+        to_update = []
+        for i, (curr, target) in enumerate(zip(self.last_sent, target_positions)):
+            if abs(target - curr) >= self.threshold:
+                to_update.append((i, target))
+
+        # 如果有变化
+        if to_update:
+            # 构建增量命令
+            new_positions = self.last_sent.copy()
+            for i, pos in to_update:
+                new_positions[i] = pos
+
+            # 发送
+            self.hand.set_joint_positions(new_positions)
+            self.last_sent = new_positions
+
+# 使用
+controller = CompressedController(hand, threshold=1.0)
+
+for target in smooth_targets:
+    controller.update(target)
+    time.sleep(0.02)
+\`\`\`
+
+---
+
+## 性能对比
+
+| 优化方法 | 响应速度 | 平滑度 | 实现复杂度 | 适用场景 |
+|----------|----------|--------|------------|----------|
+| 批量命令 | +++ | - | 低 | 通用 |
+| 预测控制 | ++ | ++ | 中 | 低延迟要求 |
+| 自适应控制 | + | +++ | 中 | 变负载任务 |
+| 平滑轨迹 | - | +++ | 低 | 精细操作 |
+| 通信压缩 | + | + | 中 | 资源受限场景 |
+
++++ 显著提升  ++ 中等提升  + 略有提升  - 无变化
+        `
+      },
+      {
+        id: 'simulation-optimization',
+        title: '仿真性能优化',
+        summary: 'MuJoCo 仿真环境配置优化、训练加速和资源利用最佳实践。',
+        tags: ['仿真', 'MuJoCo', '优化'],
+        content: `
+## 仿真性能优化概述
+
+\`\`\`
+仿真性能瓶颈分析：
+
+┌─────────────────────────────────────────────────────────┐
+│                   计算时间分布                            │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ Physics step (MuJoCo)           ████████████   │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ JAX/NumPy computation           ██████           │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ Data transfer (CPU↔GPU)         ████            │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ I/O (checkpoint, logging)        ██              │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                         │
+│  优化策略：                                             │
+│  1. 减少物理步数（ timestep↑）                         │
+│  2. JIT 编译加速计算                                    │
+│  3. 批量处理减少传输                                   │
+│  4. 异步 I/O                                           │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+\`\`\`
+
+---
+
+## 优化 1：MuJoCo 配置
+
+### 时间步调整
+
+\`\`\`xml
+<!-- aero_hand.xml -->
+
+<mujoco model="aero_hand">
+    <!-- 默认 timestep=0.002 -->
+    <!-- 可增大到 0.005-0.01 减少计算量 -->
+
+    <option timestep="0.005"
+            iterations="20"
+            ls_iterations="5">
+        <!-- 约束求解迭代 -->
+        <!-- 减少迭代次数（在不严重影响精度时） -->
+
+        <flag energy="disable"
+              fwdinv="disable"
+              sensornoise="disable"/>
+        <!-- 禁用不必要的计算 -->
+    </option>
+</mujoco>
+\`\`\`
+
+### 几何简化
+
+\`\`\`xml
+<!-- 简化碰撞检测 -->
+
+<option>
+    <flag contact="enable"/>
+</option>
+
+<!-- 对于抓取任务，可以使用简化的碰撞几何 -->
+<worldbody>
+    <geom type="box" size="0.1 0.1 0.1"  <!-- 使用盒子替代复杂网格 -->
+          friction="1 0.1 0.1"/>
+</worldbody>
+\`\`\`
+
+---
+
+## 优化 2：MJX 加速
+
+### JIT 预热
+
+\`\`\`python
+import jax
+import jax.numpy as jnp
+
+# 预热 JIT 编译
+# 第一次调用会触发编译，后续调用会使用缓存
+
+def step_fn(state, action):
+    # 仿真步进
+    data = step(state, action)
+    return data
+
+# 预热
+_ = step_fn(initial_state, random_action)
+
+# 实际使用 - 会很快
+for _ in range(1000):
+    state = step_fn(state, action)
+\`\`\`
+
+### 批量并行
+
+\`\`\`python
+# 利用 JAX 的 vmap 进行批量并行
+
+from jax import vmap
+
+# 单个环境
+def env_step(state, action):
+    return step_fn(state, action)
+
+# 批量环境
+num_envs = 1024
+batched_env_step = vmap(env_step, in_axes=(0, 0))
+
+# 一次性计算所有环境
+states = batched_env_step(states, actions)
+\`\`\`
+
+---
+
+## 优化 3：并行环境配置
+
+### 环境数量选择
+
+\`\`\`
+环境数量选择指南：
+
+GPU 内存估算：
+- 每个环境 ≈ 10-20MB（取决于状态维度）
+- 策略网络 ≈ 50MB
+- 总计 ≈ 10GB for 512 envs
+
+选择建议：
+- 8GB GPU: num_envs=256-512
+- 16GB GPU: num_envs=512-1024
+- 24GB GPU: num_envs=1024-2048
+
+注意：实际需求可能因任务复杂度而异
+\`\`\`
+
+### 配置示例
+
+\`\`\`python
+# training_config.py
+config = {
+    # 并行环境数
+    "num_envs": 1024,
+
+    # 训练步数
+    "num_train_steps": 10_000_000,
+
+    # 批量大小
+    "batch_size": 2048,
+
+    # Epoch 数
+    "ppo_epochs": 8,
+
+    # 学习率
+    "learning_rate": 3e-4,
+
+    # 评估间隔
+    "eval_interval": 10000,
+    "eval_episodes": 100,
+}
+\`\`\`
+
+---
+
+## 优化 4：检查点策略
+
+### 异步保存
+
+\`\`\`python
+import orbax.checkpoint as ocp
+import asyncio
+
+# 创建检查点管理器
+checkpoint_manager = ocp.CheckpointManager(
+    '/path/to/checkpoints',
+    ocp.PyTreeCheckpointer(),
+    create=True,
+    # 异步操作
+    options={
+        "save_interval": 100000,  # 每10万步保存一次
+    }
+)
+
+# 训练循环
+for step in range(10_000_000):
+    # 训练...
+    train_step()
+
+    # 定期评估
+    if step % 10000 == 0:
+        reward = evaluate()
+        metrics = {"reward": reward}
+
+        # 异步保存（不阻塞训练）
+        checkpoint_manager.save(step, metrics)
+\`\`\`
+
+### 增量保存
+
+\`\`\`python
+# 只保存必要的部分，减少保存时间
+
+def save_incremental(checkpoint_manager, step, policy, optimizer):
+    """增量保存策略"""
+    # 只保存参数，不保存优化器状态（可以重置）
+    params = policy.params
+
+    # 使用异步保存
+    checkpoint_manager.save(
+        step,
+        {"params": params}
+    )
+\`\`\`
+
+---
+
+## 优化 5：GPU 利用
+
+### 内存管理
+
+\`\`\`python
+# 清理未使用的内存
+import jax
+
+# 在循环中定期清理
+for iteration in range(1000):
+    # 训练...
+
+    # 每100次迭代清理一次
+    if iteration % 100 == 0:
+        # 触发垃圾回收
+        jax.clear_caches()
+
+# 或使用 reset 释放内存
+jax.random.normal(jax.random.PRNGKey(0), (1000, 1000))
+del _  # 删除引用
+\`\`\`
+
+### 混合精度
+
+\`\`\`python
+# 使用 float32 加速
+from jax import numpy as jnp
+
+# 创建模型时指定精度
+params = {
+    "w1": jnp.zeros((256, 128), dtype=jnp.float32),
+    "b1": jnp.zeros((128,), dtype=jnp.float32),
+}
+
+# JAX 会自动使用硬件加速（如 TensorCore）
+# 不需要手动指定 float16
+\`\`\`
+
+---
+
+## 性能监控
+
+### 训练监控
+
+\`\`\`python
+# 使用 wandb 监控性能
+import wandb
+
+wandb.init(project="aero-hand", name="optimized-run")
+
+for iteration in range(num_iterations):
+    # 训练
+    t0 = time.time()
+    train_step()
+    train_time = time.time() - t0
+
+    # 评估
+    if iteration % eval_interval == 0:
+        t1 = time.time()
+        reward = evaluate()
+        eval_time = time.time() - t1
+
+        wandb.log({
+            "iteration": iteration,
+            "train_time": train_time,
+            "eval_time": eval_time,
+            "reward": reward,
+            "steps_per_second": num_envs * episode_length / train_time,
+        })
+\`\`\`
+
+### 瓶颈分析
+
+\`\`\`python
+# 性能分析
+import cProfile
+import pstats
+
+pr = cProfile.Profile()
+pr.enable()
+
+# 运行训练
+train()
+
+pr.disable()
+
+# 输出统计
+stats = pstats.Stats(pr)
+stats.sort_stats('cumulative')
+stats.print_stats(20)  # 显示前20个最耗时的函数
+\`\`\`
+
+---
+
+## 优化效果对比
+
+| 优化项 | 预期加速 | 注意事项 |
+|--------|----------|----------|
+| timestep 0.002→0.005 | 2-3x | 可能影响精度 |
+| 约束迭代 50→20 | 2x | 可能不稳定 |
+| JIT 预热 | 10-50x | 首次编译慢 |
+| 批量环境 512→1024 | 2x | 需要更多内存 |
+| 异步检查点 | 1.1-1.2x | 不影响训练 |
+| float32 (默认) | 2x vs float64 | 精度损失可接受 |
+
+---
+
+## 实用配置模板
+
+\`\`\`python
+# optimized_config.py
+
+# MuJoCo 配置
+MUJOCO_CONFIG = {
+    "timestep": 0.005,
+    "iterations": 20,
+    "ls_iterations": 5,
+}
+
+# 训练配置
+TRAINING_CONFIG = {
+    "num_envs": 1024,
+    "batch_size": 2048,
+    "ppo_epochs": 8,
+    "learning_rate": 3e-4,
+    "num_train_steps": 10_000_000,
+    "save_interval": 100000,
+    "eval_interval": 10000,
+}
+
+# 资源利用
+RESOURCE_CONFIG = {
+    "num_envs_per_core": 64,  # 每个 CPU 核的环境数
+    "preallocate_memory": True,
+    "use_float32": True,
+}
+\`\`\`
+        `
+      },
+      {
+        id: 'system-optimization',
+        title: '系统资源调优',
+        summary: '整体系统资源管理，包括内存、CPU 和 IO 优化。',
+        tags: ['系统', '资源', '优化'],
+        content: `
+## 系统资源调优概述
+
+\`\`\`
+资源调优层次：
+
+┌─────────────────────────────────────────────────────────┐
+│                    系统资源层次                          │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   应用层                                                │
+│   ├─ Python 对象 / JAX 数组                             │
+│   ├─ 训练循环 / 数据处理                                 │
+│   └─ 策略推理                                           │
+│                                                         │
+│   ─────────────────────────────────────────────        │
+│                                                         │
+│   运行时                                                │
+│   ├─ Python GC                                          │
+│   ├─ JAX 内存管理                                       │
+│   └─ 操作系统调度                                        │
+│                                                         │
+│   ─────────────────────────────────────────────        │
+│                                                         │
+│   硬件层                                                │
+│   ├─ CPU 缓存                                          │
+│   ├─ GPU 内存                                          │
+│   └─ 磁盘 IO                                            │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+
+调优原则：
+1. 减少不必要的数据复制
+2. 预分配内存，避免运行时分配
+3. 批量处理，减少函数调用开销
+4. 异步 IO，不阻塞计算
+\`\`\`
+
+---
+
+## 优化 1：内存管理
+
+### JAX 内存
+
+\`\`\`python
+# JAX 内存配置
+import jax
+
+# 设置 JAX 内存 fraction
+# 默认使用 90% 的可用内存
+os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.8'
+
+# 或使用 preallocate
+os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'true'
+
+# 在代码中强制垃圾回收
+import jax
+import jax.numpy as jnp
+
+# 训练循环
+for iteration in range(1000):
+    # ... 训练代码 ...
+
+    # 每100次迭代清理
+    if iteration % 100 == 0:
+        jax.clear_caches()
+\`\`\`
+
+### Python GC 控制
+
+\`\`\`python
+import gc
+
+class MemoryOptimizer:
+    def __init__(self):
+        self.gc_interval = 50
+
+    def step(self, iteration):
+        if iteration % self.gc_interval == 0:
+            gc.collect()
+
+# 使用
+optimizer = MemoryOptimizer()
+
+for iteration in range(10000):
+    # 训练代码
+    train_step()
+
+    optimizer.step(iteration)
+\`\`\`
+
+---
+
+## 优化 2：数据处理
+
+### 预分配缓冲区
+
+\`\`\`python
+import numpy as np
+
+class PreallocatedBuffers:
+    """预分配数据缓冲区"""
+
+    def __init__(self, num_envs, obs_dim, action_dim):
+        self.num_envs = num_envs
+
+        # 预分配
+        self.obs_buffer = np.zeros((num_envs, obs_dim), dtype=np.float32)
+        self.action_buffer = np.zeros((num_envs, action_dim), dtype=np.float32)
+        self.reward_buffer = np.zeros(num_envs, dtype=np.float32)
+
+        # 只在需要时创建新数组
+        self.temp_buffer = None
+
+    def update(self, new_obs):
+        # 就地更新，避免分配新内存
+        np.copyto(self.obs_buffer, new_obs)
+
+    def get_temp(self, shape):
+        """获取临时缓冲区"""
+        if self.temp_buffer is None or self.temp_buffer.shape != shape:
+            self.temp_buffer = np.zeros(shape, dtype=np.float32)
+        return self.temp_buffer
+\`\`\`
+
+### 批量操作
+
+\`\`\`python
+# 批量处理代替循环
+import numpy as np
+
+# 低效
+positions = []
+for i in range(1000):
+    pos = compute_position(i)
+    positions.append(pos)
+positions = np.array(positions)
+
+# 高效
+indices = np.arange(1000)
+positions = compute_positions_batch(indices)  # 向量化函数
+\`\`\`
+
+---
+
+## 优化 3：IO 优化
+
+### 异步日志
+
+\`\`\`python
+import asyncio
+import json
+from queue import Queue
+import threading
+
+class AsyncLogger:
+    """异步日志记录器"""
+
+    def __init__(self, filename):
+        self.filename = filename
+        self.queue = Queue()
+        self.running = True
+
+        # 后台线程处理 IO
+        self.thread = threading.Thread(target=self._writer)
+        self.thread.start()
+
+    def log(self, data):
+        self.queue.put(data)
+
+    def _writer(self):
+        with open(self.filename, 'a') as f:
+            while self.running:
+                try:
+                    data = self.queue.get(timeout=0.1)
+                    f.write(json.dumps(data) + '\\n')
+                    f.flush()
+                except:
+                    continue
+
+    def stop(self):
+        self.running = False
+        self.thread.join()
+\`\`\`
+
+### 内存映射文件
+
+\`\`\`python
+import numpy as np
+import tempfile
+import os
+
+class MappedArray:
+    """使用内存映射文件存储大数据"""
+
+    def __init__(self, shape, dtype, filename=None):
+        if filename is None:
+            # 使用临时文件
+            self.temp_file = tempfile.NamedTemporaryFile(delete=False)
+            filename = self.temp_file.name
+        else:
+            self.temp_file = None
+
+        self.shape = shape
+        self.dtype = dtype
+
+        # 创建内存映射
+        self.data = np.memmap(filename, dtype=dtype, mode='w+',
+                              shape=shape)
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, value):
+        self.data[key] = value
+
+    def flush(self):
+        self.data.flush()
+\`\`\`
+
+---
+
+## 优化 4：CPU 利用
+
+### 多进程数据处理
+
+\`\`\`python
+from multiprocessing import Pool, cpu_count
+import numpy as np
+
+def process_trajectory(trajectory_data):
+    """处理单条轨迹"""
+    # CPU 密集型处理
+    features = extract_features(trajectory_data)
+    return features
+
+# 使用多进程
+if __name__ == "__main__":
+    num_workers = cpu_count() - 1
+
+    with Pool(num_workers) as pool:
+        results = pool.map(process_trajectory, all_trajectories)
+
+    # 结果聚合
+    all_features = np.array(results)
+\`\`\`
+
+### 缓存优化
+
+\`\`\`python
+from functools import lru_cache
+
+@lru_cache(maxsize=128)
+def compute_expensive(state_tuple):
+    """缓存计算结果"""
+    # 将 numpy 数组转换为 tuple 以便缓存
+    return expensive_computation(state_tuple)
+
+# 使用缓存
+for state in states:
+    state_key = tuple(state)  # 转换为可哈希类型
+    result = compute_expensive(state_key)
+\`\`\`
+
+---
+
+## 优化 5：监控工具
+
+### 资源监控
+
+\`\`\`python
+import psutil
+import time
+import threading
+
+class ResourceMonitor:
+    """资源监控器"""
+
+    def __init__(self):
+        self.running = False
+        self.thread = None
+        self.samples = []
+
+    def start(self, interval=1.0):
+        self.running = True
+        self.interval = interval
+        self.thread = threading.Thread(target=self._monitor)
+        self.thread.start()
+
+    def _monitor(self):
+        process = psutil.Process()
+
+        while self.running:
+            sample = {
+                'time': time.time(),
+                'cpu_percent': process.cpu_percent(),
+                'memory_mb': process.memory_info().rss / 1024 / 1024,
+                'num_threads': process.num_threads(),
+            }
+            self.samples.append(sample)
+            time.sleep(self.interval)
+
+    def stop(self):
+        self.running = False
+        if self.thread:
+            self.thread.join()
+
+    def report(self):
+        import numpy as np
+        cpu = [s['cpu_percent'] for s in self.samples]
+        mem = [s['memory_mb'] for s in self.samples]
+
+        print(f"CPU: mean={np.mean(cpu):.1f}%, max={np.max(cpu):.1f}%")
+        print(f"Memory: mean={np.mean(mem):.1f}MB, max={np.max(mem):.1f}MB")
+
+# 使用
+monitor = ResourceMonitor()
+monitor.start()
+
+# ... 运行代码 ...
+
+monitor.stop()
+monitor.report()
+\`\`\`
+
+---
+
+## 综合配置建议
+
+\`\`\`python
+# system_config.py
+
+import os
+
+# JAX 配置
+os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.8'
+os.environ['XLA_FLAGS'] = '--xla_gpu_enable_async_collectives=true'
+
+# Python 配置
+import gc
+gc.setthreshold(70000, 10000, 10000)  # 调整 GC 阈值
+
+# 训练配置建议
+RECOMMENDED_CONFIG = {
+    # 并行度
+    'num_envs': 1024,
+    'num_workers': max(1, os.cpu_count() - 2),
+
+    # 内存
+    'preallocate_buffers': True,
+    'gc_interval': 50,
+
+    # IO
+    'async_logging': True,
+    'checkpoint_interval': 100000,
+
+    # 监控
+    'enable_monitoring': True,
+    'monitor_interval': 10,
+}
+\`\`\`
+        `
+      }
+    ]
+  },
+  // ========== 项目案例 ==========
+  {
+    id: 'projectCases',
+    title: '项目案例',
+    icon: 'Briefcase',
+    description: '完整的项目实现案例，展示从需求到交付的全流程',
+    articles: [
+      {
+        id: 'grasp-project',
+        title: '抓取机器人完整实现',
+        summary: '从需求分析到 Sim2Real 部署的完整抓取机器人项目。',
+        tags: ['抓取', 'Sim2Real', '完整项目'],
+        content: `
+## 项目概述
+
+\`\`\`
+项目目标：实现一个能够抓取随机位置物体的机器人
+
+技术要求：
+- 视觉系统检测物体位置
+- 灵巧手完成抓取
+- 成功率 > 80%
+- 抓取时间 < 3 秒
+
+技术路线：
+1. 仿真环境搭建
+2. 域随机化训练
+3. Sim2Real 部署
+4. 持续优化
+\`\`\`
+
+---
+
+## 阶段 1：需求分析
+
+### 功能需求
+
+\`\`\`
+抓取机器人功能列表：
+
+F1: 物体检测
+- 使用深度相机获取点云
+- 检测物体位置和姿态
+- 过滤背景物体
+
+F2: 抓取规划
+- 基于视觉信息选择抓取点
+- 计算抓取姿态
+- 避免碰撞检测
+
+F3: 抓取执行
+- 移动到预抓取位置
+- 闭合手指
+- 验证抓取成功
+
+F4: 放置任务
+- 移动到目标位置
+- 释放物体
+- 返回初始位置
+\`\`\`
+
+### 非功能需求
+
+\`\`\`
+性能指标：
+- 抓取成功率：≥ 85%
+- 抓取周期：≤ 3 秒
+- 最大物体重量：200g
+
+可靠性：
+- 连续运行 100 次无故障
+- 故障自动恢复
+
+环境要求：
+- 标准室内光照
+- 固定相机位置
+- 平面工作台
+\`\`\`
+
+---
+
+## 阶段 2：仿真环境搭建
+
+### 环境定义
+
+\`\`\`python
+# grasp_env.py
+import gymnasium as gym
+import numpy as np
+import mujoco
+
+class GraspingEnv(gym.Env):
+    """抓取仿真环境"""
+
+    def __init__(self, xml_path="aero_hand_grasp.xml"):
+        super().__init__()
+
+        # 加载模型
+        self.model = mujoco.MjSpec.from_file(xml_path).to_model()
+        self.data = mujoco.MjData(self.model)
+
+        # 动作空间：7个关节
+        self.action_space = gym.spaces.Box(
+            low=-1, high=1, shape=(7,), dtype=np.float32
+        )
+
+        # 观测空间
+        obs_dim = 7 + 3 + 4 + 3  # 关节 + 位置 + 旋转 + 速度
+        self.observation_space = gym.spaces.Box(
+            low=-np.inf, high=np.inf,
+            shape=(obs_dim,), dtype=np.float32
+        )
+
+    def reset(self, seed=None):
+        super().reset(seed=seed)
+
+        # 随机化物体的位置和姿态
+        self._randomize_object()
+
+        # 重置仿真
+        mujoco.mj_reset(self.model, self.data)
+
+        return self._get_obs(), {}
+
+    def step(self, action):
+        # 应用动作
+        self._apply_action(action)
+
+        # 物理步进
+        mujoco.mj_step(self.model, self.data)
+
+        # 计算奖励
+        reward = self._compute_reward()
+
+        # 检查完成
+        done = self._is_done()
+        info = self._get_info()
+
+        return self._get_obs(), reward, done, False, info
+
+    def _compute_reward(self):
+        """奖励函数设计"""
+        reward = 0.0
+
+        # 1. 接触奖励
+        if self._check_contact():
+            reward += 0.5
+
+        # 2. 抬起奖励
+        object_height = self.data.body("object").xpos[2]
+        if object_height > 0.05:
+            reward += 1.0
+
+        # 3. 抓取成功
+        if self._check_grasp_success():
+            reward += 10.0
+
+        # 4. 动作惩罚
+        reward -= 0.01 * np.sum(np.square(self.data.ctrl[:7]))
+
+        return reward
+
+    def _check_grasp_success(self):
+        """检查抓取成功"""
+        # 物体在手掌内且被握住
+        object_pos = self.data.body("object").xpos
+        palm_pos = self.data.body("palm").xpos
+        distance = np.linalg.norm(object_pos - palm_pos)
+
+        finger_closed = np.mean(self.data.ctrl[:4]) > 0.8
+
+        return distance < 0.05 and finger_closed
+\`\`\`
+
+### 域随机化配置
+
+\`\`\`python
+# domain_randomization.py
+class DomainRandomizer:
+    """域随机化配置"""
+
+    def __init__(self):
+        self.randomization_ranges = {
+            # 物理参数
+            'tendon_stiffness': (800, 1200),
+            'joint_damping': (0.05, 0.2),
+            'friction': (0.6, 1.0),
+
+            # 物体属性
+            'object_mass': (0.05, 0.15),
+            'object_size': (0.03, 0.08),
+
+            # 观测噪声
+            'position_noise': (0, 0.01),
+            'delay': (0, 0.05),
+        }
+
+    def randomize(self, env):
+        """应用随机化到环境"""
+        for param, (low, high) in self.randomization_ranges.items():
+            value = np.random.uniform(low, high)
+            setattr(env, param, value)
+\`\`\`
+
+---
+
+## 阶段 3：策略训练
+
+### PPO 配置
+
+\`\`\`python
+# ppo_config.py
+PPO_CONFIG = {
+    # 环境
+    'env_name': 'GraspingEnv',
+    'num_envs': 512,
+    'num_train_steps': 20_000_000,
+
+    # 算法
+    'learning_rate': 3e-4,
+    'gamma': 0.99,
+    'GAE_lambda': 0.95,
+    'clip_epsilon': 0.2,
+    'entropy_cost': 1e-2,
+
+    # 训练
+    'batch_size': 2048,
+    'ppo_epochs': 8,
+    'max_grad_norm': 0.5,
+
+    # 保存
+    'save_interval': 100000,
+    'eval_interval': 10000,
+}
+\`\`\`
+
+### 训练脚本
+
+\`\`\`python
+# train_grasp.py
+import gymnasium as gym
+from mujoco_playground import harness
+
+def main():
+    # 创建环境
+    env = gym.make('GraspingEnv')
+
+    # 训练
+    harness.train(PPO_CONFIG, env)
+
+    # 评估
+    success_rate = harness.evaluate(num_episodes=100)
+    print(f"Success rate: {success_rate:.2%}")
+
+if __name__ == '__main__':
+    main()
+\`\`\`
+
+---
+
+## 阶段 4：Sim2Real 部署
+
+### 部署架构
+
+\`\`\`
+部署架构图：
+
+┌─────────────────────────────────────────────────────────┐
+│                    部署系统架构                          │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   ┌───────────┐    ┌───────────┐    ┌───────────┐       │
+│   │  深度相机 │───▶│  工控机   │───▶│  ESP32   │       │
+│   │  (RealSense)│ │  (推理)   │    │  (控制)   │       │
+│   └───────────┘    └─────┬─────┘    └─────┬─────┘       │
+│                          │                  │           │
+│                          ▼                  ▼           │
+│                   ┌───────────┐        ┌───────────┐    │
+│                   │  视觉算法 │        │  HLS3606M │    │
+│                   │  检测/定位│        │   舵机   │    │
+│                   └───────────┘        └───────────┘    │
+│                          │                  │           │
+│                          ▼                  ▼           │
+│                   ┌───────────┐        ┌───────────┐    │
+│                   │  抓取规划 │        │  机械手   │    │
+│                   └───────────┘        └───────────┘    │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+\`\`\`
+
+### 部署代码
+
+\`\`\`python
+# deploy_grasp.py
+import numpy as np
+from aero_open_sdk import AeroHand
+import time
+
+class GraspingDeployer:
+    """抓取部署器"""
+
+    def __init__(self, policy_path):
+        # 加载策略
+        self.policy = self._load_policy(policy_path)
+
+        # 连接硬件
+        self.hand = AeroHand()
+        self.hand.home()
+        time.sleep(1)
+
+        # 视觉系统
+        self.vision = RealSenseCamera()
+
+    def _load_policy(self, path):
+        """加载训练好的策略"""
+        import torch
+        policy = GRASPOLICY()  # 你的策略类
+        policy.load_state_dict(torch.load(path))
+        policy.eval()
+        return policy
+
+    def get_obs(self):
+        """获取当前观测"""
+        # 视觉观测
+        depth_image = self.vision.get_depth()
+        point_cloud = self.vision.depth_to_points(depth_image)
+
+        # 物体检测
+        object_pos, object_rot = self.detect_object(point_cloud)
+
+        # 关节位置
+        joint_pos = np.array(self.hand.get_joint_positions()) / 100.0
+
+        # 组合
+        obs = np.concatenate([joint_pos, object_pos, object_rot])
+
+        return obs
+
+    def detect_object(self, point_cloud):
+        """检测物体位置和姿态"""
+        # 使用点云处理检测物体
+        # 返回位置 (3,) 和旋转四元数 (4,)
+        pass
+
+    def run(self):
+        """运行抓取"""
+        print("等待物体就位...")
+
+        while True:
+            # 获取观测
+            obs = self.get_obs()
+
+            # 策略推理
+            with torch.no_grad():
+                action = self.policy(torch.FloatTensor(obs))
+
+            # 转换为控制命令
+            command = self._action_to_command(action)
+
+            # 执行
+            self.hand.set_joint_positions(command)
+
+            # 检查抓取状态
+            if self._check_grasp_complete():
+                print("抓取完成!")
+                break
+
+            time.sleep(0.05)  # 20Hz
+
+    def _action_to_command(self, action):
+        """将策略动作转换为控制命令"""
+        # action 是归一化的 [-1, 1]
+        # 转换为百分比 [0, 100]
+        command = ((action.numpy() + 1) * 50).tolist()
+        return command
+
+    def _check_grasp_complete(self):
+        """检查抓取是否完成"""
+        # 检查物体是否被握住
+        joint_positions = self.hand.get_joint_positions()
+        avg_closed = np.mean(joint_positions[:4])
+
+        return avg_closed > 75  # 手指大部分闭合
+\`\`\`
+
+---
+
+## 阶段 5：测试与优化
+
+### 测试计划
+
+\`\`\`
+测试阶段：
+
+T1: 仿真测试
+- 1000 次随机抓取
+- 记录成功/失败
+- 分析失败原因
+
+T2: 实验室测试
+- 10 种不同物体
+- 100 次抓取/物体
+- 统计成功率
+
+T3: 长时间测试
+- 连续运行 8 小时
+- 记录故障次数
+- 评估稳定性
+\`\`\`
+
+### 性能优化
+
+\`\`\`python
+# optimization.py
+class PerformanceOptimizer:
+    """性能优化器"""
+
+    def __init__(self, deployer):
+        self.deployer = deployer
+        self.metrics = []
+
+    def add_metrics(self, success, time_taken):
+        """记录指标"""
+        self.metrics.append({
+            'success': success,
+            'time': time_taken,
+        })
+
+    def get_report(self):
+        """生成性能报告"""
+        import numpy as np
+
+        successes = [m['success'] for m in self.metrics]
+        times = [m['time'] for m in self.metrics]
+
+        return {
+            'success_rate': np.mean(successes),
+            'avg_time': np.mean(times),
+            'max_time': np.max(times),
+        }
+
+    def suggest_improvements(self):
+        """根据数据分析提出改进建议"""
+        report = self.get_report()
+
+        suggestions = []
+
+        if report['success_rate'] < 0.85:
+            suggestions.append("成功率偏低，建议增加域随机化范围")
+
+        if report['avg_time'] > 2.5:
+            suggestions.append("抓取时间偏长，建议优化轨迹")
+
+        return suggestions
+\`\`\`
+
+---
+
+## 项目交付物
+
+\`\`\`
+交付清单：
+
+D1: 仿真环境代码
+- grasp_env.py
+- domain_randomization.py
+- train_grasp.py
+
+D2: 训练好的策略
+- grasp_policy.pt
+- 训练曲线图
+
+D3: 部署代码
+- deploy_grasp.py
+- vision_utils.py
+- hardware_interface.py
+
+D4: 测试报告
+- 测试数据
+- 性能分析
+- 问题清单
+
+D5: 文档
+- 用户手册
+- 维护指南
+- 故障排查
+\`\`\`
+        `
+      },
+      {
+        id: 'teleop-project',
+        title: '遥操作控制系统',
+        summary: '基于人手控制的遥操作系统实现，支持数据采集和策略学习。',
+        tags: ['遥操作', '数据采集', 'BC'],
+        content: `
+## 项目概述
+
+\`\`\`
+项目目标：实现一个人体动作捕捉驱动的遥操作系统
+
+核心功能：
+- 实时捕捉人手动作
+- 动作映射到机械手
+- 数据记录用于学习
+
+应用场景：
+- 演示展示
+- 数据采集
+- 远程控制
+\`\`\`
+
+---
+
+## 系统架构
+
+### 硬件组成
+
+\`\`\`
+硬件清单：
+
+1. 捕捉设备
+   - Leap Motion (手势捕捉)
+   - 或 Intel RealSense D455 (深度相机)
+   - 或 CyberGlove (数据手套)
+
+2. 计算平台
+   - 工控机 (Intel NUC)
+   - 或 Jetson NX
+
+3. 机械手
+   - Aero Hand Open
+   - ESP32-S3 控制器
+
+4. 显示设备
+   - 显示器 (实时反馈)
+   - VR 头显 (可选，沉浸式)
+\`\`\`
+
+### 软件架构
+
+\`\`\`
+遥操作软件栈：
+
+┌─────────────────────────────────────────────────────────┐
+│                    应用层                               │
+│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
+│   │  动作捕捉   │  │  动作映射   │  │  数据记录   │   │
+│   └─────────────┘  └─────────────┘  └─────────────┘   │
+├─────────────────────────────────────────────────────────┤
+│                    接口层                               │
+│   ┌─────────────────────────────────────────────────┐  │
+│   │              Aero Hand SDK                       │  │
+│   └─────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────┤
+│                    控制层                               │
+│   ┌─────────────────────────────────────────────────┐  │
+│   │              ESP32 固件                          │  │
+│   └─────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+\`\`\`
+
+---
+
+## 动作捕捉实现
+
+### Leap Motion 接口
+
+\`\`\`python
+# leap_motion.py
+import Leap
+import numpy as np
+
+class LeapMotionTracker:
+    """Leap Motion 动作捕捉"""
+
+    def __init__(self):
+        self.controller = Leap.Controller()
+        self.controller.set_policy_flags(
+            Leap.Controller.POLICY_OPTIMIZE_HMD
+        )
+
+    def get_hand_data(self):
+        """获取手部数据"""
+        frame = self.controller.frame()
+
+        if not frame.hands:
+            return None
+
+        hand = frame.hands[0]
+
+        # 提取关键点位置
+        fingers = []
+        for finger in hand.fingers:
+            bones = []
+            for bone in finger.bones:
+                bones.append({
+                    'start': bone.prev_joint.tolist(),
+                    'end': bone.next_joint.tolist(),
+                })
+            fingers.append(bones)
+
+        return {
+            'palm_position': hand.palm_position.tolist(),
+            'palm_normal': hand.palm_normal.tolist(),
+            'direction': hand.direction.tolist(),
+            'fingers': fingers,
+        }
+
+    def close(self):
+        self.controller.remove_listener(self)
+\`\`\`
+
+### 动作映射
+
+\`\`\`python
+# hand_mapping.py
+import numpy as np
+
+class HandMapper:
+    """人手到机械手的动作映射"""
+
+    def __init__(self):
+        # 映射配置
+        self.mapping = {
+            # 人手关节 → 机械手关节
+            'thumb_cmc': 4,  # 拇指内收
+            'thumb_mcp': 5,  # 拇指弯曲
+            'index_mcp': 0,  # 食指
+            'middle_mcp': 1, # 中指
+            'ring_mcp': 2,   # 无名指
+            'pinky_mcp': 3,  # 小指
+        }
+
+        # 角度映射比例
+        self.scale = {
+            0: 1.0,  # 食指
+            1: 1.0,  # 中指
+            2: 1.0,  # 无名指
+            3: 1.0,  # 小指
+            4: 1.2,  # 拇指内收
+            5: 0.8,  # 拇指弯曲
+        }
+
+    def map(self, human_hand_data):
+        """
+        将人手动作映射到机械手
+
+        参数:
+            human_hand_data: Leap Motion 手部数据
+
+        返回:
+            aero_hand_positions: 7个关节的目标位置 [0-100]
+        """
+        if human_hand_data is None:
+            return [0] * 7
+
+        # 提取关键角度
+        angles = self._extract_angles(human_hand_data)
+
+        # 应用映射
+        positions = []
+        for aero_joint, human_joint in self.mapping.items():
+            angle = angles.get(human_joint, 0)
+            scaled = angle * self.scale.get(aero_joint, 1.0)
+            positions.append(np.clip(scaled * 100, 0, 100))
+
+        return positions
+
+    def _extract_angles(self, hand_data):
+        """从手部数据提取关节角度"""
+        # 实现角度计算
+        pass
+\`\`\`
+
+---
+
+## 遥操作控制
+
+### 主控制器
+
+\`\`\`python
+# teleop_controller.py
+import numpy as np
+import time
+from leap_motion import LeapMotionTracker
+from hand_mapping import HandMapper
+from aero_open_sdk import AeroHand
+
+class TeleopController:
+    """遥操作控制器"""
+
+    def __init__(self):
+        # 初始化组件
+        self.tracker = LeapMotionTracker()
+        self.mapper = HandMapper()
+        self.hand = AeroHand()
+
+        # 状态
+        self.recording = False
+        self.trajectory = []
+
+        # 参数
+        self.control_frequency = 30  # Hz
+        self.latency_compensation = True
+
+    def start(self):
+        """启动遥操作"""
+        print("遥操作系统启动...")
+
+        # 归位
+        self.hand.home()
+        time.sleep(1)
+
+        print("准备就绪！")
+
+        try:
+            while True:
+                # 获取手部数据
+                hand_data = self.tracker.get_hand_data()
+
+                # 映射到机械手
+                target_positions = self.mapper.map(hand_data)
+
+                # 延迟补偿
+                if self.latency_compensation:
+                    target_positions = self._compensate_latency(
+                        target_positions
+                    )
+
+                # 发送控制命令
+                self.hand.set_joint_positions(target_positions)
+
+                # 记录数据
+                if self.recording:
+                    self._record_frame(hand_data, target_positions)
+
+                # 控制频率
+                time.sleep(1.0 / self.control_frequency)
+
+        except KeyboardInterrupt:
+            print("\\n停止遥操作")
+            self.stop()
+
+    def _compensate_latency(self, target):
+        """延迟补偿"""
+        # 简单的线性预测
+        if not hasattr(self, 'target_history'):
+            self.target_history = []
+
+        self.target_history.append(target)
+
+        if len(self.target_history) > 5:
+            self.target_history.pop(0)
+
+        if len(self.target_history) >= 2:
+            # 线性外推
+            diff = np.array(target) - np.array(self.target_history[-2])
+            predicted = np.array(target) + diff * 0.5
+            return predicted.tolist()
+
+        return target
+
+    def _record_frame(self, hand_data, target):
+        """记录一帧数据"""
+        frame = {
+            'timestamp': time.time(),
+            'hand_data': hand_data,
+            'target': target,
+            'actual': self.hand.get_joint_positions(),
+        }
+        self.trajectory.append(frame)
+
+    def start_recording(self):
+        """开始记录"""
+        self.recording = True
+        self.trajectory = []
+        print("开始记录...")
+
+    def stop_recording(self):
+        """停止记录"""
+        self.recording = False
+        print(f"记录完成，共 {len(self.trajectory)} 帧")
+
+    def save_trajectory(self, path):
+        """保存轨迹数据"""
+        import pickle
+
+        with open(path, 'wb') as f:
+            pickle.dump(self.trajectory, f)
+
+        print(f"轨迹已保存到 {path}")
+
+    def stop(self):
+        """停止系统"""
+        self.hand.set_joint_positions([0] * 7)
+        self.tracker.close()
+\`\`\`
+
+---
+
+## 数据采集
+
+### 采集配置
+
+\`\`\`python
+# data_collection.py
+import numpy as np
+
+class DataCollector:
+    """数据采集器"""
+
+    def __init__(self, controller):
+        self.controller = controller
+        self.tasks = [
+            {
+                'name': '抓取盒子',
+                'duration': 30,  # 秒
+                'description': '抓取桌上的小盒子',
+            },
+            {
+                'name': '放置物品',
+                'duration': 30,
+                'description': '将物品放到指定位置',
+            },
+            {
+                'name': '旋转物体',
+                'duration': 30,
+                'description': '将物体旋转180度',
+            },
+            # ... 更多任务
+        ]
+
+    def collect_for_task(self, task_name, num_episodes=10):
+        """为特定任务采集数据"""
+        task = self._find_task(task_name)
+
+        print(f"开始采集任务: {task['name']}")
+
+        for episode in range(num_episodes):
+            print(f"\\nEpisode {episode + 1}/{num_episodes}")
+
+            # 重置环境
+            self.controller.hand.home()
+            time.sleep(1)
+
+            # 开始记录
+            self.controller.start_recording()
+
+            # 运行任务
+            start_time = time.time()
+            while time.time() - start_time < task['duration']:
+                self.controller.start()  # 主循环迭代
+
+            # 停止记录
+            self.controller.stop_recording()
+
+            # 保存数据
+            filename = f"trajectory_{task_name}_{episode}.pkl"
+            self.controller.save_trajectory(filename)
+
+            print(f"Episode {episode + 1} 完成")
+
+    def _find_task(self, name):
+        return next(t for t in self.tasks if t['name'] == name)
+\`\`\`
+
+### 数据格式
+
+\`\`\`
+轨迹数据结构：
+
+trajectory = [
+    {
+        'timestamp': 1234567890.123,
+        'hand_data': {
+            'palm_position': [x, y, z],
+            'fingers': [...],
+        },
+        'target': [pos0, pos1, ..., pos6],  # 目标位置
+        'actual': [pos0, pos1, ..., pos6],  # 实际位置
+    },
+    ...
+]
+
+总数据量估算：
+- 30 秒 @ 30Hz = 900 帧
+- 每帧约 1KB
+- 每次采集约 1MB
+\`\`\`
+
+---
+
+## 行为克隆
+
+### 训练数据预处理
+
+\`\`\`python
+# bc_preprocessing.py
+import numpy as np
+import pickle
+
+def load_trajectory(path):
+    """加载轨迹数据"""
+    with open(path, 'rb') as f:
+        return pickle.load(f)
+
+def prepare_bc_data(trajectories):
+    """
+    准备行为克隆训练数据
+
+    返回:
+        states: (N, state_dim) 状态
+        actions: (N, action_dim) 动作
+    """
+    all_states = []
+    all_actions = []
+
+    for traj in trajectories:
+        for frame in traj:
+            # 提取状态
+            state = extract_state(frame['hand_data'])
+
+            # 提取动作（使用目标位置作为标签）
+            action = np.array(frame['target']) / 100.0  # 归一化
+
+            all_states.append(state)
+            all_actions.append(action)
+
+    return np.array(all_states), np.array(all_actions)
+
+def extract_state(hand_data):
+    """从手部数据提取状态"""
+    # 提取手掌位置和方向
+    palm_pos = np.array(hand_data['palm_position'])
+    palm_normal = np.array(hand_data['palm_normal'])
+    direction = np.array(hand_data['direction'])
+
+    # 拼接
+    state = np.concatenate([palm_pos, palm_normal, direction])
+
+    return state
+\`\`\`
+
+### BC 训练
+
+\`\`\`python
+# bc_training.py
+import torch
+import torch.nn as nn
+
+class BCPolicy(nn.Module):
+    """行为克隆策略"""
+
+    def __init__(self, state_dim, action_dim):
+        super().__init__()
+
+        self.network = nn.Sequential(
+            nn.Linear(state_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(128, action_dim),
+            nn.Tanh()
+        )
+
+    def forward(self, state):
+        return self.network(state)
+
+def train_bc(states, actions, epochs=100, batch_size=256):
+    """训练 BC 策略"""
+    policy = BCPolicy(
+        state_dim=states.shape[1],
+        action_dim=actions.shape[1]
+    )
+
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-3)
+    loss_fn = nn.MSELoss()
+
+    dataset = torch.utils.data.TensorDataset(
+        torch.FloatTensor(states),
+        torch.FloatTensor(actions)
+    )
+    dataloader = torch.utils.data.DataLoader(
+        dataset, batch_size=batch_size, shuffle=True
+    )
+
+    for epoch in range(epochs):
+        total_loss = 0
+
+        for batch_states, batch_actions in dataloader:
+            # 前向传播
+            pred_actions = policy(batch_states)
+
+            # 计算损失
+            loss = loss_fn(pred_actions, batch_actions)
+
+            # 反向传播
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+        if epoch % 10 == 0:
+            avg_loss = total_loss / len(dataloader)
+            print(f"Epoch {epoch}, Loss: {avg_loss:.4f}")
+
+    return policy
+\`\`\`
+
+---
+
+## 项目交付物
+
+\`\`\`
+交付清单：
+
+D1: 遥操作软件
+- teleop_controller.py
+- leap_motion.py
+- hand_mapping.py
+
+D2: 数据采集
+- data_collection.py
+- bc_preprocessing.py
+
+D3: 训练代码
+- bc_training.py
+- policy.py
+
+D4: 配置
+- mapping_config.yaml
+- task_definitions.yaml
+
+D5: 文档
+- 快速开始指南
+- 校准说明
+- 故障排查
+\`\`\`
+        `
+      }
+    ]
   }
 ]
 

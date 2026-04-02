@@ -199,7 +199,7 @@
           <!-- 语言设置 -->
           <div v-if="activeSection === 'language'" class="section-panel">
             <div class="section-title">
-              <el-icon><Translate /></el-icon>
+              <el-icon><ChatLineSquare /></el-icon>
               语言设置
             </div>
             <div class="section-description">选择界面显示语言（预留功能）</div>
@@ -345,7 +345,7 @@ import { usePreferencesStore } from '@/stores/preferences'
 import { useNotificationsStore } from '@/stores/notifications'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Setting, Sunny, Moon, VideoPlay, Bell, Translate,
+  Setting, Sunny, Moon, VideoPlay, Bell, ChatLineSquare,
   Folder, Download, Upload, RefreshLeft, Warning,
   InfoFilled, Check, Brush, Grid, CircleCheck,
   Delete, Trophy, MagicStick, Document

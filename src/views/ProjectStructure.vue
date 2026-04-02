@@ -972,7 +972,7 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.stats-row :deep(.el-statistic__head {
+.stats-row :deep(.el-statistic__head) {
   font-size: 12px;
   color: #909399;
 }

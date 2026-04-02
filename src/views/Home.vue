@@ -375,7 +375,7 @@ import { useAchievementsStore } from '@/stores/achievements'
 import { ElMessage } from 'element-plus'
 import { Search, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { LearningPath, LearningResources, TaskDetailModal } from '@/components/learning'
-import AIAssistant from '@/components/AIAssistant.vue'
+import AIAssistant from '@/components/ai/AIAssistant.vue'
 
 const learningStore = useLearningStore()
 const achievementsStore = useAchievementsStore()

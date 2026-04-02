@@ -163,7 +163,7 @@
         <el-divider />
         <div class="settings-item">
           <div class="settings-item-info">
-            <el-icon><Speaker /></el-icon>
+            <el-icon><ChatLineSquare /></el-icon>
             <span>声音提醒</span>
           </div>
           <el-switch v-model="settings.soundEnabled" />
@@ -189,7 +189,7 @@ import { ref, computed, watch } from 'vue'
 import { useNotificationsStore, NotificationType, NotificationCategory } from '@/stores/notifications'
 import {
   Bell, Setting, Delete, Trophy, Check, MagicStick,
-  CircleCheck, Speaker
+  CircleCheck, ChatLineSquare
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 

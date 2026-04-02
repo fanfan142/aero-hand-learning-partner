@@ -2491,5 +2491,1429 @@ class HandFactory:
 \`\`\`
       `
     }
+  },
+
+  // ========== 调试日志解读 ==========
+  debugLogs: {
+    firmwareLogs: {
+      title: '固件日志解读',
+      content: `
+## 固件日志详解
+
+### 启动日志
+
+\`\`\`
+ESP32 启动时输出：
+
+ESP-ROM:esp32s3-rc4-20220823
+Build:Aug 29 2023
+rst:0x1 (POWERON),boot:0x8 (SPI_FAST_FLASH_BOOT)
+ets_main.c 329  __start
+SPIWP:0xee
+mode:DIO, clock div:2
+load:0x3fce3808,len:0x09bc
+load:0x40375768,len:0x8c34
+load:0x3fce8810,len:0x54c
+load:0x40391600,len:0x3cb8
+entry 0x403d68f8
+
+解读：
+- rst:0x1 (POWERON) → 正常上电启动
+- boot:0x8 → SPI Flash 启动模式
+- 后续地址加载了固件代码
+\`\`\`
+
+### 串口协议日志
+
+\`\`\`
+发送命令格式：
+[7E] [CMD] [DATA0-11] [CHECKSUM] [7E]
+
+示例 - 设置位置命令：
+7E 01 00 D0 07 01 ... 00 XX 7E
+│  │  │  │   │  │      │  │   │
+│  │  │  │   │  │      │  │   └── 校验和
+│  │  │  │   │  │      │  └─────── 帧尾
+│  │  │  │   │  │      └────────── 保留/数据
+│  │  │  │   │  └──────────────── 舵机1位置(低)
+│  │  │  │   └─────────────────── 舵机1位置(高)
+│  │  │  └──────────────────────── 舵机0位置(低)
+│  │  └──────────────────────────── 舵机0位置(高)
+│  └─────────────────────────────── 舵机0 ID
+└──────────────────────────────── 帧头(0x7E)
+\`\`\`
+
+### 归位日志
+
+\`\`\`
+归位过程日志：
+
+[Homing] Starting homing sequence...
+[Homing] Moving to extend position...
+[Homing] Servo 0 at target: YES
+[Homing] Servo 1 at target: YES
+[Homing] Servo 2 at target: YES
+[Homing] Servo 3 at target: NO  ← 注意这个
+[Homing] Retrying servo 3...
+[Homing] Servo 3 at target: YES
+[Homing] All servos homed successfully!
+
+解读：
+- 逐个检查舵机到位状态
+- 如果某个舵机未到位，会重试
+- 全部完成后输出成功消息
+\`\`\`
+
+### 错误日志
+
+\`\`\`
+常见错误码：
+
+0xE1 - 校验和错误
+→ 可能原因：通信干扰、波特率不匹配
+
+0xE2 - 命令格式错误
+→ 可能原因：数据长度不对、参数越界
+
+0xE3 - 舵机超时
+→ 可能原因：舵机供电不足、总线断路
+
+0xE4 - 舵机错误
+→ 可能原因：舵机故障、ID冲突
+
+0xE5 - 归位失败
+→ 可能原因：机械卡住、超时
+
+示例：
+[ERROR] Checksum mismatch: expected=0xD6, got=0xA3
+[ERROR] Servo 3 timeout
+[ERROR] Homing failed after 3 retries
+\`\`\`
+
+### 调试模式输出
+
+\`\`\`
+启用调试模式后，增加以下输出：
+
+[DEBUG] Received: 7E 01 00 D0 07 ...
+[DEBUG] Checksum OK
+[DEBUG] CMD: SET_POSITION, Servo: 0, Pos: 2000
+[DEBUG] Sending to servo bus...
+[DEBUG] Servo 0 ACK received
+[DEBUG] Response time: 2.3ms
+
+解读：
+- 每一步操作都有详细记录
+- 可以追踪命令执行流程
+- 便于定位通信问题
+      `
+    },
+    sdkLogs: {
+      title: 'SDK 日志分析',
+      content: `
+## SDK 日志详解
+
+### 连接日志
+
+\`\`\`
+正常连接日志：
+
+[SDK] Initializing AeroHand...
+[SDK] Scanning serial ports...
+[SDK] Found ports: ['COM3', 'COM4', '/dev/ttyUSB0']
+[SDK] Trying port: /dev/ttyUSB0
+[SDK] Opening port at 921600 baud...
+[SDK] Port opened successfully
+[SDK] Sending ping...
+[SDK] Ping successful, firmware version: 1.0.0
+[SDK] Hand initialized successfully
+
+解读：
+- 完整记录了连接过程
+- 可以看到扫描到的所有端口
+- ping 成功确认固件响应
+\`\`\`
+
+### 控制日志
+
+\`\`\`
+设置位置时的日志：
+
+[SDK] set_joint_positions([50, 50, 50, 50, 50, 50, 50])
+[SDK] Validating positions...
+[SDK] Position validation passed
+[SDK] Converting to servo counts...
+[SDK] Servo 0: 50% → count 2000
+[SDK] Servo 1: 50% → count 2000
+[SDK] ...
+[SDK] Building packet: 7E 01 00 D0 07 ...
+[SDK] Sending packet (16 bytes)...
+[SDK] Waiting for response...
+[SDK] Response received: 7E 01 00 D0 07 ... (16 bytes)
+[SDK] Checksum verified
+[SDK] Command completed successfully
+
+解读：
+- 显示所有位置的验证过程
+- 百分比到计数值的转换
+- 完整的发送接收过程
+\`\`\`
+
+### 错误日志
+
+\`\`\`
+通信错误：
+
+[SDK] ERROR: Failed to send command
+[SDK] ERROR DETAILS: SerialException: Write timeout
+[SDK] RETRY: Attempt 1/3
+[SDK] Retrying...
+[SDK] ERROR: Failed to send command
+[SDK] ERROR DETAILS: SerialException: Write timeout
+[SDK] RETRY: Attempt 2/3
+[SDK] Retrying...
+[SDK] ERROR: Failed after 3 retries
+[SDK] RAISING: CommunicationError
+
+解读：
+- 详细的错误信息
+- 自动重试过程
+- 最终失败的异常类型
+
+校验错误：
+
+[SDK] Response received: 7E 01 00 D0 07 ...
+[SDK] Checksum mismatch!
+[SDK] Expected: 0xD6
+[SDK] Got: 0xA3
+[SDK] Dropping packet
+[SDK] RAISING: ChecksumError
+\`\`\`
+
+### 状态日志
+
+\`\`\`
+状态查询日志：
+
+[SDK] get_joint_positions()
+[SDK] Building query packet: 7E 10 00 ...
+[SDK] Sending query to servo 0...
+[SDK] Response: pos=1980
+[SDK] Querying servo 1...
+[SDK] Response: pos=2020
+[SDK] ...
+[SDK] All servos queried
+[SDK] Returning: [49, 50, 50, 50, 50, 50, 50]
+
+解读：
+- 每个舵机的查询过程
+- 解析响应数据
+- 最终返回的关节位置
+      `
+    },
+    simulationLogs: {
+      title: '仿真日志解读',
+      content: `
+## 仿真日志详解
+
+### 训练日志
+
+\`\`\`
+PPO 训练日志：
+
+[Train] Step: 100000 / 10000000
+[Train] Episode reward: 125.3
+[Train] Running reward: 118.7 ± 15.2
+[Train] Loss: 0.023
+[Train] Entropy: 2.15
+[Train] KL divergence: 0.012
+[Train] Learning rate: 0.0003
+[Train] Steps/sec: 1523
+[Train] GPU memory: 4.2GB / 8GB
+
+解读：
+- Step: 当前步数 / 总步数
+- Episode reward: 当前 episode 奖励
+- Running reward: 滑动平均奖励
+- Loss: 策略/价值损失
+- Entropy: 策略熵（衡量探索）
+- KL: KL 散度（策略变化幅度）
+- Steps/sec: 训练速度
+\`\`\`
+
+### 环境日志
+
+\`\`\`
+环境步进日志：
+
+[Env] Reset
+[Env] Object position: [0.15, -0.02, 0.05]
+[Env] Object rotation: [0.71, 0.0, 0.71, 0.0]
+[Env] Step 0: action=[0.1, 0.2, ...], reward=0.5
+[Env] Step 1: action=[0.15, 0.18, ...], reward=0.8
+[Env] Step 2: action=[0.2, 0.15, ...], reward=1.2
+[Env] Done: success=True, total_reward=15.3
+
+解读：
+- 每步的动作和奖励
+- 累加的总奖励
+- 最终是否成功
+\`\`\`
+
+### 评估日志
+
+\`\`\`
+策略评估日志：
+
+[Eval] Starting evaluation (100 episodes)
+[Eval] Episode 1/100: success=True, time=2.3s
+[Eval] Episode 2/100: success=True, time=1.9s
+[Eval] Episode 3/100: success=False, reason=object_dropped
+[Eval] Episode 4/100: success=True, time=2.1s
+...
+[Eval] Episode 100/100: success=True, time=2.5s
+[Eval] ========================================
+[Eval] Success rate: 87.0%
+[Eval] Average time: 2.31s
+[Eval] Average reward: 12.45
+[Eval] ========================================
+
+解读：
+- 逐 episode 记录
+- 失败原因分析
+- 汇总统计
+\`\`\`
+
+### 错误日志
+
+\`\`\`
+物理仿真错误：
+
+[Sim] ERROR: Physics instability detected
+[Sim] Joint 3 velocity exceeds limit (15.2 > 10.0)
+[Sim] Reducing timestep...
+[Sim] Retrying step...
+[Sim] Step successful
+
+或
+
+[Sim] ERROR: Collision detection failed
+[Sim] Geometries: box vs sphere
+[Sim] Contact points: 0
+[Sim] Skipping collision
+
+解读：
+- MuJoCo 物理引擎警告
+- 自动尝试恢复
+- 严重错误会终止仿真
+      `
+    }
+  },
+
+  // ========== 额外实战案例 ==========
+  additionalCases: {
+    cubeRotate: {
+      title: '魔方旋转完整案例',
+      content: `
+## 案例：魔方旋转任务
+
+### 项目目标
+
+\`\`\`
+目标：训练一个策略，使机械手能够将魔方旋转180度
+
+成功标准：
+- 魔方绕Z轴旋转 ≥ 180°
+- 魔方保持在手中（不掉落）
+- 完成时间 ≤ 10秒
+\`\`\`
+
+### 环境定义
+
+\`\`\`python
+# cube_rotate_env.py
+import gymnasium as gym
+import mujoco
+import numpy as np
+
+class CubeRotateEnv(gym.Env):
+    def __init__(self):
+        self.model = mujoco.MjSpec.from_file(
+            "aero_cube_rotate.xml"
+        ).to_model()
+        self.data = mujoco.MjData(self.model)
+
+        # 动作空间：7个关节
+        self.action_space = gym.spaces.Box(
+            low=-1, high=1, shape=(7,), dtype=np.float32
+        )
+
+        # 观测空间：关节位置 + 魔方姿态
+        self.observation_space = gym.spaces.Box(
+            low=-np.inf, high=np.inf,
+            shape=(7 + 4,), dtype=np.float32
+        )
+
+    def reset(self, seed=None):
+        super().reset(seed=seed)
+        mujoco.mj_reset(self.data)
+
+        # 初始抓取位置
+        self.data.ctrl[:] = [50, 50, 50, 50, 60, 40, 0]
+
+        return self._get_obs(), {}
+
+    def step(self, action):
+        # 应用动作
+        self._apply_action(action)
+
+        # 物理步进
+        mujoco.mj_step(self.model, self.data)
+
+        # 计算奖励
+        reward = self._compute_reward()
+
+        # 检查完成
+        done = self._is_done()
+
+        return self._get_obs(), reward, done, False, {}
+
+    def _get_obs(self):
+        """获取观测"""
+        joint_pos = self.data.qpos[:7]
+        cube_quat = self.data.body("cube").xquat
+        return np.concatenate([joint_pos, cube_quat])
+
+    def _compute_reward(self):
+        """计算奖励"""
+        # 获取当前旋转角度
+        current_angle = self._get_z_rotation()
+
+        # 目标角度
+        target_angle = np.pi  # 180度
+
+        # 奖励：越接近目标越好
+        error = abs(current_angle - target_angle)
+        reward = -error * 10
+
+        # 成功奖励
+        if error < 0.1:
+            reward += 20.0
+
+        # 保持抓取的奖励
+        if self._check_grasp_maintained():
+            reward += 0.5
+
+        return reward
+
+    def _get_z_rotation(self):
+        """获取魔方Z轴旋转角度"""
+        quat = self.data.body("cube").xquat
+        # 从四元数提取Z轴旋转
+        # ...
+        return angle_z
+
+    def _check_grasp_maintained(self):
+        """检查是否保持抓取"""
+        cube_pos = self.data.body("cube").xpos
+        palm_pos = self.data.body("palm").xpos
+        return np.linalg.norm(cube_pos - palm_pos) < 0.1
+\`\`\`
+
+### 域随机化
+
+\`\`\`python
+class DomainRandomizer:
+    def __init__(self):
+        self.params = {
+            'tendon_stiffness': (800, 1200),
+            'joint_damping': (0.05, 0.2),
+            'cube_mass': (0.08, 0.12),
+            'cube_friction': (0.3, 0.7),
+        }
+
+    def randomize(self, env):
+        for name, (low, high) in self.params.items():
+            value = np.random.uniform(low, high)
+            setattr(env, name, value)
+\`\`\`
+
+### 训练配置
+
+\`\`\`python
+TRAINING_CONFIG = {
+    'env_name': 'CubeRotateEnv',
+    'num_envs': 512,
+    'num_train_steps': 10_000_000,
+    'learning_rate': 3e-4,
+    'batch_size': 2048,
+    'ppo_epochs': 8,
+    'save_interval': 100000,
+}
+\`\`\`
+
+### Sim2Real 部署
+
+\`\`\`python
+# deploy_cube_rotate.py
+import numpy as np
+from aero_open_sdk import AeroHand
+import time
+
+class CubeRotator:
+    def __init__(self, policy_path):
+        self.policy = load_policy(policy_path)
+        self.hand = AeroHand()
+        self.hand.home()
+
+    def get_observation(self):
+        joint_pos = np.array(self.hand.get_joint_positions()) / 100.0
+        # 需要视觉系统获取魔方位置
+        # 这里简化处理
+        cube_quat = np.array([1, 0, 0, 0])
+        return np.concatenate([joint_pos, cube_quat])
+
+    def run(self):
+        print("开始旋转任务...")
+        step = 0
+
+        while step < 200:
+            obs = self.get_observation()
+            action = self.policy(obs)
+
+            # 转换动作
+            command = ((action + 1) * 50).tolist()
+            self.hand.set_joint_positions(command)
+
+            time.sleep(0.05)
+            step += 1
+
+        print("任务完成")
+
+    def _action_to_command(self, action):
+        return ((action + 1) * 50).tolist()
+\`\`\`
+      `
+    },
+    assemblySequence: {
+      title: '装配序列规划案例',
+      content: `
+## 案例：装配序列规划
+
+### 项目背景
+
+\`\`\`
+目标：使用机械手完成简单的装配任务
+任务：将零件 A 装配到零件 B 上
+难度：中等，需要精确的视觉定位和力控制
+\`\`\`
+
+### 系统架构
+
+\`\`\`
+装配系统组成：
+
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│  工业相机   │───▶│   工控机    │───▶│  Aero Hand  │
+│ (视觉定位)  │    │ (规划控制)  │    │   (执行)    │
+└──────────────┘    └──────────────┘    └──────────────┘
+                          │
+                          ▼
+                   ┌──────────────┐
+                   │  力传感器   │
+                   │ (力反馈)   │
+                   └──────────────┘
+\`\`\`
+
+### 视觉定位
+
+\`\`\`python
+# vision_localization.py
+import cv2
+import numpy as np
+
+class VisionLocalizer:
+    def __init__(self, camera_params):
+        self.camera_matrix = camera_params['matrix']
+        self.dist_coeffs = camera_params['dist']
+
+    def localize_part(self, image):
+        """从图像中定位零件"""
+        # 边缘检测
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 50, 150)
+
+        # 找轮廓
+        contours, _ = cv2.findContours(
+            edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+
+        # 筛选目标零件
+        target = self._select_target_contour(contours)
+
+        # 计算位置
+        if target is not None:
+            pos_2d = self._get_center(target)
+            pos_3d = self._pixel_to_3d(pos_2d)
+            angle = self._get_orientation(target)
+            return {'position': pos_3d, 'angle': angle}
+
+        return None
+
+    def _pixel_to_3d(self, pixel):
+        """像素坐标转3D坐标"""
+        # 使用PnP算法
+        # ...
+        return [x, y, z]
+\`\`\`
+
+### 力控制
+
+\`\`\`python
+# force_control.py
+import numpy as np
+
+class ForceController:
+    def __init__(self, hand):
+        self.hand = hand
+        self.force_threshold = 2.0  # N
+
+    def insert_with_force(self, target_pos, approach_dir):
+        """力控制插入"""
+        # 接近阶段
+        self._approach(target_pos, approach_dir)
+
+        # 搜索阶段 - 小幅探索
+        for _ in range(10):
+            force = self._read_force()
+
+            if force < self.force_threshold:
+                # 继续插入
+                self._move_down(0.001)
+            else:
+                # 检测到接触，调整位置
+                adjustment = self._compute_adjustment(force)
+                self._adjust_position(adjustment)
+
+        # 确认插入完成
+        return self._check_insertion_complete()
+
+    def _read_force(self):
+        """读取当前力"""
+        # 从力传感器读取
+        # 这里简化处理
+        return self.hand.get_joint_loads()
+\`\`\`
+
+### 装配任务执行
+
+\`\`\`python
+# assembly_task.py
+class AssemblyTask:
+    def __init__(self):
+        self.hand = AeroHand()
+        self.vision = VisionLocalizer(camera_params)
+        self.force_ctrl = ForceController(self.hand)
+
+    def execute(self, part_a, part_b):
+        """执行装配任务"""
+        print(f"开始装配: {part_a} → {part_b}")
+
+        # 1. 视觉定位零件A
+        pos_a = self._locate_part(part_a)
+        print(f"零件A位置: {pos_a}")
+
+        # 2. 视觉定位零件B
+        pos_b = self._locate_part(part_b)
+        print(f"零件B位置: {pos_b}")
+
+        # 3. 移动到零件A
+        self._move_to(pos_a)
+        print("已到达零件A")
+
+        # 4. 抓取零件A
+        self._grasp(part_a)
+        print("已抓取零件A")
+
+        # 5. 移动到零件B上方
+        target = self._compute_target(pos_a, pos_b)
+        self._move_to(target)
+        print("已到达目标位置")
+
+        # 6. 力控制插入
+        success = self.force_ctrl.insert_with_force(
+            target,
+            approach_dir=[0, 0, -1]
+        )
+
+        if success:
+            print("装配成功!")
+        else:
+            print("装配失败")
+
+        # 7. 释放
+        self._release()
+        return success
+\`\`\`
+      `
+    },
+    handwritingRobot: {
+      title: '写字机器人案例',
+      content: `
+## 案例：写字机器人
+
+### 项目目标
+
+\`\`\`
+目标：使用机械手控制笔书写文字或图形
+
+技术要点：
+- 末端执行器（笔）控制
+- 轨迹跟踪
+- 力控制（保持书写压力）
+\`\`\`
+
+### 末端执行器设计
+
+\`\`\`
+笔夹设计：
+
+3D打印零件：
+- pen_holder.stl - 笔夹主体
+- pen_clamp_x.stl - X轴夹爪
+- pen_clamp_y.stl - Y轴夹爪
+
+安装：
+- 替换拇指指尖
+- 使用肌腱驱动夹爪
+- 预留笔的插入空间
+
+夹持力调节：
+- 通过预紧力调整
+- 夹持力过大会阻碍笔运动
+- 夹持力过小笔会滑落
+\`\`\`
+
+### 轨迹生成
+
+\`\`\`python
+# trajectory_generator.py
+import numpy as np
+
+class TrajectoryGenerator:
+    def __init__(self):
+        self.stroke_width = 2.0  # mm
+        self.stroke_height = 50.0  # mm
+
+    def generate_from_text(self, text):
+        """从文本生成书写轨迹"""
+        from svg.path import parse_path
+
+        # 将文字转换为SVG路径
+        svg = self._text_to_svg(text)
+
+        # 解析路径
+        paths = parse_path(svg)
+
+        # 采样轨迹点
+        trajectory = []
+        for path in paths:
+            points = self._sample_path(path, num_points=100)
+            trajectory.extend(points)
+
+        return np.array(trajectory)
+
+    def _sample_path(self, path, num_points):
+        """采样路径点"""
+        points = []
+        for i in range(num_points):
+            t = i / num_points
+            point = path.point(t)
+            points.append([point.real, point.imag])
+
+        return points
+
+    def smooth_trajectory(self, trajectory, lookahead=5):
+        """轨迹平滑（Savitzky-Golay滤波）"""
+        from scipy.signal import savgol_filter
+
+        # 分离X和Y
+        x = trajectory[:, 0]
+        y = trajectory[:, 1]
+
+        # 滤波
+        x_smooth = savgol_filter(x, lookahead*2+1, 3)
+        y_smooth = savgol_filter(y, lookahead*2+1, 3)
+
+        return np.column_stack([x_smooth, y_smooth])
+\`\`\`
+
+### 书写控制
+
+\`\`\`python
+# handwriting_controller.py
+import numpy as np
+import time
+
+class HandwritingController:
+    def __init__(self, hand):
+        self.hand = hand
+
+        # 书写参数
+        self.paper_height = 0.1  # 纸张高度
+        self.stroke_speed = 20.0  # mm/s
+        self.down_force = 0.5     # 下压力
+
+        # 关节配置：保持笔竖直
+        self.pen_angle = [0, 0, 0, 0, 50, 80, 0]
+
+    def write_text(self, text):
+        """书写文本"""
+        traj_gen = TrajectoryGenerator()
+        trajectory = traj_gen.generate_from_text(text)
+
+        # 平滑轨迹
+        trajectory = traj_gen.smooth_trajectory(trajectory)
+
+        print(f"书写轨迹: {len(trajectory)} 点")
+
+        # 执行书写
+        self._execute_trajectory(trajectory)
+
+    def _execute_trajectory(self, trajectory):
+        """执行书写轨迹"""
+        # 计算总长度和时间
+        lengths = np.sqrt(np.sum(np.diff(trajectory, axis=0)**2, axis=1))
+        total_length = np.sum(lengths)
+        duration = total_length / self.stroke_speed
+
+        # 降下笔
+        self._pen_down()
+        time.sleep(0.2)
+
+        # 跟随轨迹
+        steps = len(trajectory)
+        for i in range(steps):
+            target = trajectory[i]
+            self._move_to(target)
+
+            # 控制频率
+            time.sleep(duration / steps)
+
+        # 抬起笔
+        self._pen_up()
+
+    def _pen_down(self):
+        """笔下降到纸张"""
+        # 调整拇指角度增加压力
+        target = self.pen_angle.copy()
+        target[5] = 90  # 增加拇指压力
+        self.hand.set_joint_positions(target)
+
+    def _pen_up(self):
+        """笔抬起"""
+        self.hand.set_joint_positions(self.pen_angle)
+
+    def _move_to(self, target_2d):
+        """移动到目标位置（2D）"""
+        # 简单的位置控制
+        # 实际需要更复杂的逆运动学
+        target = self._compute_joint_positions(target_2d)
+        self.hand.set_joint_positions(target)
+
+    def _compute_joint_positions(self, target_2d):
+        """计算达到目标位置的关节位置"""
+        # 简化的映射
+        x, y = target_2d
+
+        # 关节0-3 控制X方向
+        joint_x = np.interp(x, [-50, 50], [0, 100])
+
+        # 关节4-5 控制Y方向
+        joint_y = np.interp(y, [0, 100], [0, 100])
+
+        positions = self.pen_angle.copy()
+        positions[0:4] = [joint_x] * 4
+        positions[4:6] = [joint_y] * 2
+
+        return positions
+\`\`\`
+      `
+    }
+  },
+
+  // ========== 最佳实践总结 ==========
+  bestPracticesSummary: {
+    developmentCycle: {
+      title: '开发周期最佳实践',
+      content: `
+## 开发周期最佳实践
+
+### 敏捷开发流程
+
+\`\`\`
+Sprint 周期：2周
+
+Sprint 计划 (第1天)
+├─ 回顾上Sprint
+├─ 确定本Sprint目标
+└─ 分解任务
+
+日常开发 (第2-10天)
+├─ 每日站会 (15分钟)
+├─ 持续集成
+└─ 代码审查
+
+Sprint 结束 (第11-14天)
+├─ 功能演示
+├─ 回顾会议
+└─ 文档更新
+\`\`\`
+
+### 代码管理
+
+\`\`\`
+Git 工作流：
+
+main (稳定版本)
+  ↑
+  │ 合并
+  │
+develop (开发分支)
+  ↑
+  │ 创建特性分支
+  │
+feature/xxx (特性分支)
+  - 功能开发完成后合并到 develop
+  - 需要通过所有测试和代码审查
+
+发布流程：
+1. 从 develop 创建 release 分支
+2. 发布测试
+3. 合并到 main 并打标签
+\`\`\`
+
+### 代码审查清单
+
+\`\`\`
+代码审查要点：
+
+□ 功能正确性
+  - 是否实现了需求？
+  - 边界条件处理？
+  - 错误处理？
+
+□ 代码质量
+  - 命名规范？
+  - 函数长度 < 50行？
+  - 重复代码提取？
+
+□ 测试覆盖
+  - 单元测试？
+  - 集成测试？
+  - 测试覆盖率 > 80%？
+
+□ 文档
+  - 函数文档字符串？
+  - 复杂逻辑有注释？
+  - 更新了 README？
+
+□ 性能
+  - 无明显性能问题？
+  - 资源释放？
+\`\`\`
+
+### CI/CD 流程
+
+\`\`\`
+持续集成：
+
+1. 提交代码
+   ↓
+2. 自动构建
+   ├─ 安装依赖
+   ├─ 编译固件
+   └─ 打包 SDK
+   ↓
+3. 自动测试
+   ├─ 单元测试
+   ├─ 集成测试
+   └─ 静态分析
+   ↓
+4. 报告结果
+   ↓
+5. 部署到测试环境
+
+部署阶段：
+- 测试环境：自动部署
+- 预生产：手动触发
+- 生产：批准后部署
+\`\`\`
+      `
+    },
+    testingPractices: {
+      title: '测试最佳实践',
+      content: `
+## 测试最佳实践
+
+### 测试金字塔
+
+\`\`\`
+测试金字塔：
+
+         ┌───────────────┐
+         │     E2E       │  ← 少量，重要
+         │   (端到端)     │
+         ├───────────────┤
+         │  Integration  │  ← 中等
+         │   (集成测试)   │
+         ├───────────────┤
+         │     Unit      │  ← 大量
+         │   (单元测试)   │
+         └───────────────┘
+
+比例建议：
+- 单元测试：70%
+- 集成测试：20%
+- E2E测试：10%
+\`\`\`
+
+### 单元测试
+
+\`\`\`python
+# test_servo_control.py
+import pytest
+from aero_open_sdk import AeroHand
+
+class TestServoControl:
+    def test_position_mapping(self):
+        """测试位置映射"""
+        hand = AeroHand()
+
+        # 测试边界
+        assert hand._percent_to_count(0, 0) == hand.servos[0].extend_count
+        assert hand._percent_to_count(0, 100) == hand.servos[0].grasp_count
+
+        # 测试中间值
+        mid = hand._percent_to_count(0, 50)
+        expected = (hand.servos[0].extend_count +
+                    hand.servos[0].grasp_count) // 2
+        assert abs(mid - expected) <= 1
+
+    def test_position_clamping(self):
+        """测试位置限制"""
+        hand = AeroHand()
+
+        # 超出范围应被限制
+        assert hand._percent_to_count(0, -10) == 0
+        assert hand._percent_to_count(0, 110) == 100
+
+    @pytest.mark.parametrize("servo_id", range(7))
+    def test_all_servos(self, servo_id):
+        """参数化测试所有舵机"""
+        hand = AeroHand()
+        pos = hand._percent_to_count(servo_id, 50)
+        assert 0 <= pos <= 4095
+\`\`\`
+
+### 集成测试
+
+\`\`\`python
+# test_integration.py
+import pytest
+import time
+from aero_open_sdk import AeroHand
+
+class TestIntegration:
+    @pytest.fixture
+    def hand(self):
+        """测试夹具"""
+        h = AeroHand()
+        h.home()
+        yield h
+        h.set_joint_positions([0]*7)
+
+    def test_full_motion_range(self, hand):
+        """测试完整运动范围"""
+        # 张开
+        hand.set_joint_positions([0]*7)
+        time.sleep(1)
+        positions = hand.get_joint_positions()
+        assert all(p < 10 for p in positions)
+
+        # 闭合
+        hand.set_joint_positions([100]*7)
+        time.sleep(1)
+        positions = hand.get_joint_positions()
+        assert all(p > 90 for p in positions)
+
+    def test_sequence_execution(self, hand):
+        """测试序列执行"""
+        sequence = [
+            [0, 0, 0, 0, 0, 0, 0],
+            [50, 50, 50, 50, 50, 50, 50],
+            [100, 100, 100, 100, 100, 100, 100],
+        ]
+
+        for positions in sequence:
+            hand.set_joint_positions(positions)
+            time.sleep(0.5)
+            # 验证（允许一定误差）
+            current = hand.get_joint_positions()
+            assert all(abs(c-p) < 15 for c, p in zip(current, positions))
+\`\`\`
+
+### 仿真测试
+
+\`\`\`python
+# test_simulation.py
+import pytest
+import numpy as np
+from grasp_env import GraspingEnv
+
+class TestGraspingEnv:
+    @pytest.fixture
+    def env(self):
+        return GraspingEnv()
+
+    def test_reset(self, env):
+        """测试环境重置"""
+        obs, _ = env.reset()
+        assert obs.shape == env.observation_space.shape
+        assert not np.any(np.isnan(obs))
+
+    def test_action_space(self, env):
+        """测试动作空间"""
+        action = env.action_space.sample()
+        obs, reward, done, _, _ = env.step(action)
+
+        assert obs.shape == env.observation_space.shape
+        assert isinstance(reward, float)
+        assert isinstance(done, bool)
+
+    def test_reward_shaping(self, env):
+        """测试奖励塑形"""
+        env.reset()
+
+        # 测试奖励计算
+        action = env.action_space.sample()
+        obs, reward, done, _, _ = env.step(action)
+
+        # 奖励应该在合理范围内
+        assert -100 < reward < 100
+\`\`\`
+
+### 测试覆盖率
+
+\`\`\`bash
+# 运行覆盖率测试
+pytest --cov=src --cov-report=html tests/
+
+# 生成报告
+coverage report
+coverage html
+
+# 覆盖率要求
+- 行覆盖率 > 80%
+- 函数覆盖率 > 90%
+- 分支覆盖率 > 70%
+\`\`\`
+      `
+    },
+    deploymentPractices: {
+      title: '部署最佳实践',
+      content: `
+## 部署最佳实践
+
+### 部署环境
+
+\`\`\`
+环境分层：
+
+┌─────────────────────────────────────────┐
+│           生产环境 (Production)           │
+│  - 真实硬件                             │
+│  - 稳定版本                             │
+│  - 监控告警                             │
+├─────────────────────────────────────────┤
+│           预生产 (Staging)               │
+│  - 真实硬件                             │
+│  - 最新发布候选                          │
+│  - 全面测试                             │
+├─────────────────────────────────────────┤
+│           开发 (Development)             │
+│  - 仿真环境                             │
+│  - 快速迭代                             │
+└─────────────────────────────────────────┘
+\`\`\`
+
+### 部署检查清单
+
+\`\`\`
+部署前检查：
+
+□ 代码审查通过
+□ 所有测试通过
+□ 更新了文档
+□ 备份了配置
+□ 通知了相关人员
+□ 准备了回滚方案
+
+部署后检查：
+
+□ 功能测试通过
+□ 性能指标正常
+□ 日志无错误
+□ 监控系统正常
+□ 用户反馈正常
+\`\`\`
+
+### 固件部署
+
+\`\`\`bash
+# 固件部署脚本
+#!/bin/bash
+
+VERSION=$1
+ENV=$2
+
+echo "部署固件 v$VERSION 到 $ENV"
+
+# 构建固件
+pio run --environment release
+
+# 签名（生产环境）
+if [ "$ENV" == "production" ]; then
+    ./sign_firmware.sh build/firmware.bin
+fi
+
+# 上传到服务器
+scp build/firmware.bin deploy@server:/firmware/
+
+# 通知设备更新
+curl -X POST https://api.example.com/deploy \\
+    -d "version=$VERSION" \\
+    -d "environment=$ENV"
+
+echo "部署完成"
+\`\`\`
+
+### SDK 部署
+
+\`\`\`python
+# 发布脚本
+#!/bin/bash
+
+VERSION=$1
+
+# 更新版本号
+sed -i "s/version=.*/version='$VERSION'/" setup.py
+
+# 构建分发包
+python -m build
+
+# 上传到 PyPI
+twine upload dist/*
+
+# 创建 GitHub Release
+gh release create v$VERSION \\
+    --title "Release $VERSION" \\
+    --notes "$(cat CHANGELOG.md)"
+\`\`\`
+
+### 回滚方案
+
+\`\`\`
+回滚触发条件：
+- 成功率 < 95%
+- 错误率上升 > 10%
+- 用户反馈严重问题
+
+回滚步骤：
+
+1. 停止部署
+   curl -X POST /api/deploy/stop
+
+2. 切换到旧版本
+   if [ "$ENV" == "production" ]; then
+       ./rollback.sh v1.2.3
+   fi
+
+3. 验证功能
+   pytest tests/ -v
+
+4. 通知团队
+   slack通知 "已回滚到 v1.2.3"
+\`\`\`
+
+### 监控和告警
+
+\`\`\`python
+# 监控指标
+
+关键指标：
+- 请求成功率
+- 响应延迟 (P50, P95, P99)
+- 错误率
+- 资源使用率 (CPU, Memory)
+
+告警规则：
+- 成功率 < 99%: 警告
+- 成功率 < 95%: 严重
+- P95延迟 > 1s: 警告
+- P95延迟 > 5s: 严重
+
+监控工具：
+- Prometheus + Grafana
+- ELK Stack (日志)
+- Sentry (错误跟踪)
+\`\`\`
+      `
+    },
+    collaborationPractices: {
+      title: '协作最佳实践',
+      content: `
+## 协作最佳实践
+
+### 代码协作
+
+\`\`\`
+Pull Request 流程：
+
+1. 创建分支
+   git checkout -b feature/my-feature
+
+2. 开发并提交
+   git commit -m "feat: add new feature"
+
+3. 推送并创建 PR
+   git push origin feature/my-feature
+
+4. 代码审查
+   - 至少 1 人审查
+   - 所有评论已解决
+
+5. 合并
+   - Squash and merge
+   - 删除分支
+
+PR 描述模板：
+\`\`\`
+## 描述
+[简短描述改动]
+
+## 类型
+- [ ] Bug 修复
+- [ ] 新功能
+- [ ] 重构
+- [ ] 文档
+
+## 测试
+- [ ] 单元测试
+- [ ] 集成测试
+- [ ] 手动测试
+
+## 截图 (UI改动)
+\`\`\`
+\`\`\`
+
+### 文档协作
+
+\`\`\`
+文档维护：
+
+1. 代码内文档
+   - 函数文档字符串
+   - 复杂逻辑注释
+   - 类型注解
+
+2. API 文档
+   - 自动生成 (Sphinx/Docusaurus)
+   - 示例代码
+   - 更新日志
+
+3. Wiki/知识库
+   - 项目文档
+   - 常见问题
+   - 教程
+
+文档评审：
+- PR 需要包含文档更新
+- 文档错误也算 bug
+\`\`\`
+
+### 视觉追踪
+
+\`\`\`
+项目可视化：
+
+工具：Notion, Linear, Jira
+
+工作项类型：
+- Epic (大特性)
+- Story (用户故事)
+- Task (任务)
+- Bug (缺陷)
+
+工作流：
+Backlog → Todo → In Progress → Review → Done
+
+常用字段：
+- 标题
+- 描述
+- 负责人
+- 优先级
+- 标签
+- 截止日期
+- 关联 PR
+\`\`\`
+
+### 知识共享
+
+\`\`\`
+团队知识管理：
+
+1. 技术分享会 (每周)
+   - 主题：新技术、踩坑记录、最佳实践
+   - 时长：30 分钟
+   - 录制：供后人查看
+
+2. 文档中心
+   - 架构决策记录 (ADR)
+   - 设计文档
+   - API 文档
+
+3. 代码巡览
+   - 新成员：代码走读
+   - 季度：架构演进
+
+4. 外部交流
+   - 参与开源社区
+   - 发表技术博客
+   - 参加会议演讲
+\`\`\`
+
+### 远程协作
+
+\`\`\`
+时区差异处理：
+
+重叠时间窗口：
+- 异步优先，同步其次
+- 核心讨论在重叠时间
+
+异步沟通：
+- 详细记录决策
+- 视频替代会议
+- 清晰的书面沟通
+
+工具：
+- 即时通讯：Slack
+- 视频会议：Zoom/Meet
+- 文档协作：Google Docs/Notion
+- 代码协作：GitHub
+\`\`\`
+      `
+    }
   }
 }
