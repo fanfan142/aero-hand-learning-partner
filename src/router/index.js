@@ -10,6 +10,7 @@ import TechDocs from '@/views/TechDocs.vue'
 import JointMapping from '@/views/JointMapping.vue'
 import FlowViewer from '@/views/FlowViewer.vue'
 import Bookmarks from '@/views/Bookmarks.vue'
+import Statistics from '@/views/Statistics.vue'
 
 const routes = [
   {
@@ -77,6 +78,12 @@ const routes = [
     name: 'Bookmarks',
     component: Bookmarks,
     meta: { title: '我的收藏' }
+  },
+  {
+    path: '/statistics',
+    name: 'Statistics',
+    component: Statistics,
+    meta: { title: '学习统计' }
   }
 ]
 
