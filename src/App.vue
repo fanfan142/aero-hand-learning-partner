@@ -95,6 +95,15 @@
             <span>关节映射</span>
           </div>
         </router-link>
+        <router-link to="/ws-control" custom v-slot="{ navigate, isActive }">
+          <div
+            :class="['nav-item', { active: isActive }]"
+            @click="navigate"
+          >
+            <el-icon><Connection /></el-icon>
+            <span>WiFi控制</span>
+          </div>
+        </router-link>
         <router-link to="/flows" custom v-slot="{ navigate, isActive }">
           <div
             :class="['nav-item', { active: isActive }]"

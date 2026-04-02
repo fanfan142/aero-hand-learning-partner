@@ -15,6 +15,7 @@ import Bookmarks from '@/views/Bookmarks.vue'
 import Statistics from '@/views/Statistics.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import Settings from '@/views/Settings.vue'
+import WebSocketControl from '@/views/WebSocketControl.vue'
 import NotFound from '@/views/NotFound.vue'
 
 // 路由定义
@@ -161,6 +162,16 @@ const routes = [
       title: '设置',
       icon: 'Setting',
       breadcrumb: ['首页', '设置']
+    }
+  },
+  {
+    path: '/ws-control',
+    name: 'WebSocketControl',
+    component: WebSocketControl,
+    meta: {
+      title: 'WiFi 控制',
+      icon: 'Connection',
+      breadcrumb: ['首页', 'WiFi 控制']
     }
   },
   // 404 页面 - 必须放在最后
