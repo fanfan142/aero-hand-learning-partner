@@ -2,12 +2,22 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
-// GitHub Pages 需要设置仓库名作为基础路径
-// 如果部署到 Vercel/Netlify，设置为 '/'
-// 如果部署到 GitHub Pages，设置为 '/仓库名/'
-const base = process.env.DEPLOY_TARGET === 'github-pages'
-  ? '/aero-hand-learning-partner/'
-  : '/'
+// 检测部署平台
+// GitHub Pages: DEPLOY_TARGET=github-pages
+// Vercel: IS_VERCEL=true 或 NODE_ENV=production
+// 本地开发: 默认 '/'
+const isGitHubPages = process.env.DEPLOY_TARGET === 'github-pages'
+const isVercel = process.env.VERCEL === 'true' || process.env.IS_VERCEL === 'true'
+
+let base = '/'
+if (isGitHubPages) {
+  base = '/aero-hand-learning-partner/'
+} else if (isVercel) {
+  base = '/'
+} else {
+  // 本地开发或默认
+  base = '/'
+}
 
 export default defineConfig({
   plugins: [vue()],
