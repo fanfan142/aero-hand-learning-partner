@@ -7,218 +7,419 @@
     </el-page-header>
 
     <div class="mapping-container">
-      <!-- 左栏：控制区 -->
-      <div class="control-panel">
+      <!-- 左栏：手部可视化 -->
+      <div class="hand-visualization-panel">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>关节选择</span>
-              <div class="header-actions">
-                <el-button text type="primary" @click="selectAll">全选</el-button>
-                <el-button text @click="selectFingers">四指</el-button>
-                <el-button text @click="selectThumb">拇指</el-button>
-                <el-button text @click="selectWrist">手腕</el-button>
-                <el-button text @click="clearAll">清空</el-button>
-              </div>
-            </div>
-          </template>
-
-          <div class="joint-selector">
-            <el-checkbox-group v-model="selectedJoints">
-              <div v-for="joint in jointDefinitions" :key="joint.id" class="joint-checkbox">
-                <el-checkbox :value="joint.id" border>
-                  <div class="joint-item">
-                    <span class="joint-icon" :style="{ background: joint.color }"></span>
-                    <span>{{ joint.name }}</span>
-                    <span class="joint-name-en">({{ joint.nameEn }})</span>
-                  </div>
-                </el-checkbox>
-              </div>
-            </el-checkbox-group>
-          </div>
-
-          <div class="selection-summary">
-            <div class="summary-row">
-              <span>已选 {{ selectedJoints.length }} / {{ jointDefinitions.length }} 个关节</span>
-              <el-tag v-if="outOfRangeJoints.length" type="danger" size="small">
-                存在 {{ outOfRangeJoints.length }} 个超限
-              </el-tag>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">平均位置</span>
-              <span class="summary-value">{{ averagePosition }}%</span>
-            </div>
-          </div>
-        </el-card>
-
-        <el-card shadow="hover" class="position-control-card">
-          <template #header>
-            <span>位置控制</span>
-          </template>
-
-          <div class="position-control">
-            <el-slider
-              v-model="positionPercent"
-              :min="0"
-              :max="100"
-              :step="1"
-              show-input
-              :format-tooltip="formatTooltip"
-              @change="onPositionChange"
-            />
-          </div>
-
-          <div class="preset-actions">
-            <div class="preset-title">预设动作</div>
-            <div class="preset-buttons">
-              <el-button
-                v-for="(preset, key) in presetActions"
-                :key="key"
-                :icon="preset.icon"
-                @click="applyPreset(key)"
-              >
-                {{ preset.name }}
+              <span>手部模型</span>
+              <el-button text type="primary" @click="resetAllJoints" :icon="Refresh">
+                重置
               </el-button>
             </div>
+          </template>
+
+          <div class="hand-svg-container">
+            <svg viewBox="0 0 400 450" class="hand-svg">
+              <!-- 手掌 -->
+              <g class="palm">
+                <path d="M120 180 Q100 250 110 320 Q120 350 150 360 L250 360 Q280 350 290 320 Q300 250 280 180 Q260 150 200 145 Q140 150 120 180Z"
+                      fill="#FFE4C4" stroke="#DEB887" stroke-width="2"/>
+              </g>
+
+              <!-- 拇指 (ID: 0,1) -->
+              <g class="thumb" :class="{ active: selectedJoints.includes(0) || selectedJoints.includes(1) }">
+                <!-- 拇指基部 -->
+                <path :d="getThumbBasePath()"
+                      fill="#FFB6A3" stroke="#E8A090" stroke-width="2"
+                      @click="selectJoint(0)"/>
+                <!-- 拇指远端 -->
+                <path :d="getThumbDistalPath()"
+                      fill="#FFB6A3" stroke="#E8A090" stroke-width="2"
+                      @click="selectJoint(1)"/>
+                <!-- 拇指角度指示 -->
+                <text :x="thumbAngleText.x" :y="thumbAngleText.y" class="angle-text" fill="#C44">
+                  {{ getJointAngle(1) }}°
+                </text>
+              </g>
+
+              <!-- 食指 (ID: 2) -->
+              <g class="finger finger-index" :class="{ active: selectedJoints.includes(2) }">
+                <path :d="getFingerPath(2)" fill="#87CEEB" stroke="#5CACEE" stroke-width="2"/>
+                <text :x="getFingerTextPos(2).x" :y="getFingerTextPos(2).y" class="angle-text">
+                  {{ getJointAngle(2) }}°
+                </text>
+              </g>
+
+              <!-- 中指 (ID: 3) -->
+              <g class="finger finger-middle" :class="{ active: selectedJoints.includes(3) }">
+                <path :d="getFingerPath(3)" fill="#90EE90" stroke="#6BBF6B" stroke-width="2"/>
+                <text :x="getFingerTextPos(3).x" :y="getFingerTextPos(3).y" class="angle-text">
+                  {{ getJointAngle(3) }}°
+                </text>
+              </g>
+
+              <!-- 无名指 (ID: 4) -->
+              <g class="finger finger-ring" :class="{ active: selectedJoints.includes(4) }">
+                <path :d="getFingerPath(4)" fill="#FFE4B5" stroke="#D4A574" stroke-width="2"/>
+                <text :x="getFingerTextPos(4).x" :y="getFingerTextPos(4).y" class="angle-text">
+                  {{ getJointAngle(4) }}°
+                </text>
+              </g>
+
+              <!-- 小指 (ID: 5) -->
+              <g class="finger finger-pinky" :class="{ active: selectedJoints.includes(5) }">
+                <path :d="getFingerPath(5)" fill="#DDA0DD" stroke="#BA55D3" stroke-width="2"/>
+                <text :x="getFingerTextPos(5).x" :y="getFingerTextPos(5).y" class="angle-text">
+                  {{ getJointAngle(5) }}°
+                </text>
+              </g>
+
+              <!-- 手腕 (ID: 6) -->
+              <g class="wrist" :class="{ active: selectedJoints.includes(6) }">
+                <rect x="130" y="360" width="140" height="40" rx="10"
+                      fill="#F39C12" stroke="#D68910" stroke-width="2"/>
+                <text x="200" y="385" class="angle-text wrist-text">
+                  {{ getJointAngle(6) }}°
+                </text>
+              </g>
+
+              <!-- 肌腱路径指示 (虚线) -->
+              <g class="tendons">
+                <path d="M200 170 L200 360" stroke="#CCC" stroke-width="1" stroke-dasharray="4,4" fill="none"/>
+                <path d="M150 200 Q120 250 110 290" stroke="#CCC" stroke-width="1" stroke-dasharray="4,4" fill="none"/>
+              </g>
+            </svg>
+          </div>
+
+          <!-- 关节信息弹窗 -->
+          <el-popover
+            placement="right"
+            :width="280"
+            trigger="click"
+            v-model:visible="jointDetailVisible">
+            <template #reference>
+              <div class="joint-detail-hint">点击关节查看详情</div>
+            </template>
+            <div class="joint-detail-panel" v-if="selectedJointDetail">
+              <h4 :style="{ color: selectedJointDetail.color }">
+                {{ selectedJointDetail.name }}
+              </h4>
+              <p class="joint-detail-en">{{ selectedJointDetail.nameEn }}</p>
+              <el-divider/>
+              <div class="detail-row">
+                <span>舵机ID:</span>
+                <span>{{ selectedJointDetail.servoId }}</span>
+              </div>
+              <div class="detail-row">
+                <span>最大角度:</span>
+                <span>{{ selectedJointDetail.maxAngle }}°</span>
+              </div>
+              <div class="detail-row">
+                <span>齿轮比:</span>
+                <span>{{ selectedJointDetail.gearRatio }}</span>
+              </div>
+              <div class="detail-row">
+                <span>当前位置:</span>
+                <span>{{ getJointAngle(selectedJointDetail.id) }}°</span>
+              </div>
+              <div class="detail-row">
+                <span>位置百分比:</span>
+                <span>{{ Math.round((getJointAngle(selectedJointDetail.id) / selectedJointDetail.maxAngle) * 100) }}%</span>
+              </div>
+              <div class="detail-row">
+                <span>脉冲数:</span>
+                <span>{{ getJointPulse(selectedJointDetail.id) }}</span>
+              </div>
+            </div>
+          </el-popover>
+        </el-card>
+
+        <!-- 舵机状态面板 -->
+        <el-card shadow="hover" class="servo-status-card">
+          <template #header>
+            <span>舵机状态</span>
+          </template>
+          <div class="servo-grid">
+            <div
+              v-for="joint in jointDefinitions"
+              :key="joint.id"
+              class="servo-item"
+              :class="{ active: selectedJoints.includes(joint.id) }"
+              :style="{ borderColor: joint.color }"
+              @click="toggleJointSelection(joint.id)"
+            >
+              <div class="servo-color" :style="{ background: joint.color }"></div>
+              <div class="servo-info">
+                <div class="servo-name">{{ joint.name }}</div>
+                <div class="servo-angle">{{ getJointAngle(joint.id) }}°</div>
+              </div>
+            </div>
           </div>
         </el-card>
       </div>
 
-      <!-- 中栏：实时数据流 -->
-      <div class="data-flow-panel">
+      <!-- 中栏：关节控制 -->
+      <div class="control-panel">
         <el-card shadow="hover">
           <template #header>
-            <span>实时数据流</span>
+            <span>关节控制</span>
           </template>
 
-          <div class="data-flow-content">
-            <!-- 输入层 -->
-            <div class="data-layer input-layer">
-              <div class="layer-title">输入层</div>
-              <div class="layer-content">
-                <div class="data-item">
-                  <span class="data-label">位置百分比:</span>
-                  <span class="data-value">{{ (positionPercent / 100).toFixed(2) }}</span>
-                </div>
-                <el-progress
-                  :percentage="positionPercent"
-                  :color="getProgressColor(positionPercent)"
-                  :stroke-width="20"
+          <div class="joint-controls">
+            <div v-for="joint in jointDefinitions" :key="joint.id" class="joint-control-item">
+              <div class="joint-control-header">
+                <span class="joint-color-dot" :style="{ background: joint.color }"></span>
+                <span class="joint-control-name">{{ joint.name }}</span>
+                <span class="joint-control-en">({{ joint.nameEn }})</span>
+              </div>
+
+              <div class="slider-container">
+                <el-slider
+                  v-model="jointPositions[joint.id]"
+                  :min="0"
+                  :max="100"
+                  :step="1"
+                  :show-tooltip="false"
+                  :colors="[joint.color, joint.color]"
+                  @change="onJointPositionChange(joint.id, $event)"
                 />
-              </div>
-            </div>
-
-            <!-- 映射层 -->
-            <div class="data-layer mapping-layer">
-              <div class="layer-title">映射层</div>
-              <div v-if="selectedJoints.length" class="layer-content">
-                <div v-for="jointId in selectedJoints" :key="jointId" class="joint-data">
-                  <div class="joint-name">
-                    {{ getJointName(jointId) }}
-                    <el-tag
-                      v-if="getJointData(jointId).isOutOfRange"
-                      type="danger"
-                      size="small"
-                      class="warning-tag"
-                    >
-                      超限
-                    </el-tag>
-                  </div>
-                  <div class="data-rows">
-                    <div class="data-row">
-                      <span class="data-label">关节角度:</span>
-                      <span class="data-value">{{ getJointData(jointId).jointAngle?.toFixed(1) }}°</span>
-                    </div>
-                    <div class="data-row">
-                      <span class="data-label">舵机角度:</span>
-                      <span class="data-value">{{ getJointData(jointId).servoAngle?.toFixed(1) }}°</span>
-                    </div>
-                    <div class="data-row">
-                      <span class="data-label">脉冲数量:</span>
-                      <span class="data-value">{{ getJointData(jointId).pulse }}</span>
-                    </div>
-                    <div v-if="getJointData(jointId).warning" class="data-row warning-row">
-                      <span class="data-label">提示:</span>
-                      <span class="data-value warning-text">{{ getJointData(jointId).warning }}</span>
-                    </div>
-                  </div>
+                <div class="slider-labels">
+                  <span>0°</span>
+                  <span class="current-angle">{{ getJointAngle(joint.id) }}°</span>
+                  <span>{{ joint.maxAngle }}°</span>
                 </div>
               </div>
-              <el-empty v-else description="请选择关节查看映射" />
-            </div>
 
-            <!-- 配置层 -->
-            <div class="data-layer config-layer">
-              <div class="layer-title">配置层</div>
-              <div v-if="selectedJoints.length" class="layer-content config-grid">
-                <div v-for="jointId in selectedJoints" :key="`config-${jointId}`" class="config-data">
-                  <div class="config-title">{{ getJointName(jointId) }} 配置</div>
-                  <div class="data-row">
-                    <span class="data-label">extend_count:</span>
-                    <span class="data-value">{{ getJointConfig(jointId).extendCount }}</span>
-                  </div>
-                  <div class="data-row">
-                    <span class="data-label">grasp_count:</span>
-                    <span class="data-value">{{ getJointConfig(jointId).graspCount }}</span>
-                  </div>
-                  <div class="data-row">
-                    <span class="data-label">最大角度:</span>
-                    <span class="data-value">{{ getJointConfig(jointId).maxAngle }}°</span>
-                  </div>
-                  <div class="data-row">
-                    <span class="data-label">齿轮比:</span>
-                    <span class="data-value">{{ getJointConfig(jointId).gearRatio }}</span>
-                  </div>
-                  <div class="data-row">
-                    <span class="data-label">当前脉冲:</span>
-                    <span class="data-value">{{ getJointData(jointId).pulse }}</span>
-                  </div>
-                </div>
+              <div class="joint-info-row">
+                <span class="info-label">脉冲:</span>
+                <span class="info-value">{{ getJointPulse(joint.id) }}</span>
+                <span class="info-label">舵机:</span>
+                <span class="info-value">{{ getServoAngle(joint.id) }}°</span>
               </div>
-              <el-empty v-else description="请选择关节查看配置" />
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 角度计算器 -->
+        <el-card shadow="hover">
+          <template #header>
+            <span>角度计算器</span>
+          </template>
+
+          <div class="calculator">
+            <div class="calc-row">
+              <el-input-number
+                v-model="calcInput.angle"
+                :min="0"
+                :max="180"
+                size="small"
+                placeholder="角度"
+              />
+              <span class="calc-label">角度 (°)</span>
+              <el-button @click="calculateFromAngle" type="primary" size="small">计算</el-button>
+            </div>
+            <div class="calc-result" v-if="calcResult">
+              <div class="calc-result-item">
+                <span>位置:</span>
+                <span>{{ calcResult.position }}%</span>
+              </div>
+              <div class="calc-result-item">
+                <span>脉冲:</span>
+                <span>{{ calcResult.pulse }}</span>
+              </div>
+              <div class="calc-result-item">
+                <span>舵机角度:</span>
+                <span>{{ calcResult.servoAngle }}°</span>
+              </div>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 坐标系说明 -->
+        <el-card shadow="hover">
+          <template #header>
+            <span>坐标系说明</span>
+          </template>
+          <div class="coordinate-info">
+            <div class="coord-item">
+              <div class="coord-icon" style="background: #FF6B6B;">+</div>
+              <div class="coord-text">
+                <strong>拇指内收 (0-90°)</strong>
+                <p>正值表示内收，负值表示外展</p>
+              </div>
+            </div>
+            <div class="coord-item">
+              <div class="coord-icon" style="background: #4ECDC4;">↻</div>
+              <div class="coord-text">
+                <strong>关节弯曲方向</strong>
+                <p>顺时针为正，逆时针为负</p>
+              </div>
+            </div>
+            <div class="coord-item">
+              <div class="coord-icon" style="background: #45B7D1;">↑</div>
+              <div class="coord-text">
+                <strong>手腕旋转</strong>
+                <p>向上为屈，向下为伸</p>
+              </div>
             </div>
           </div>
         </el-card>
       </div>
 
-      <!-- 右栏：可视化区 -->
-      <div class="visualization-panel">
+      <!-- 右栏：预设姿势与配置 -->
+      <div class="preset-panel">
         <el-card shadow="hover">
           <template #header>
-            <span>数据可视化</span>
+            <span>预设姿势</span>
           </template>
 
-          <div class="visualization-content">
-            <!-- 多关节对比图 -->
-            <div class="chart-section">
-              <div class="chart-title">多关节对比</div>
-              <div ref="comparisonChartRef" class="chart"></div>
-            </div>
-
-            <!-- 历史曲线 -->
-            <div class="chart-section">
-              <div class="chart-title">历史调整记录</div>
-              <div ref="historyChartRef" class="chart"></div>
+          <div class="preset-grid">
+            <div
+              v-for="(preset, key) in presetActions"
+              :key="key"
+              class="preset-item"
+              :class="{ active: currentPreset === key }"
+              @click="applyPreset(key)"
+            >
+              <div class="preset-icon">{{ preset.icon }}</div>
+              <div class="preset-name">{{ preset.name }}</div>
+              <div class="preset-name-en">{{ preset.nameEn }}</div>
             </div>
           </div>
         </el-card>
 
-        <!-- 配置导出 -->
-        <el-card shadow="hover" class="export-card">
+        <!-- 运动范围 -->
+        <el-card shadow="hover">
+          <template #header>
+            <span>运动范围</span>
+          </template>
+
+          <div class="range-chart">
+            <div v-for="joint in jointDefinitions" :key="joint.id" class="range-item">
+              <div class="range-label">
+                <span class="range-color" :style="{ background: joint.color }"></span>
+                {{ joint.name }}
+              </div>
+              <div class="range-bar-container">
+                <div
+                  class="range-bar"
+                  :style="{
+                    width: getRangeWidth(joint),
+                    background: joint.color,
+                    marginLeft: '0%'
+                  }"
+                ></div>
+                <div
+                  class="range-indicator"
+                  :style="{ left: getRangePosition(joint) + '%' }"
+                ></div>
+              </div>
+              <div class="range-value">{{ getJointAngle(joint.id) }}° / {{ joint.maxAngle }}°</div>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 配置管理 -->
+        <el-card shadow="hover">
           <template #header>
             <span>配置管理</span>
           </template>
 
-          <div class="export-buttons">
-            <el-button type="primary" :icon="Download" @click="exportConfig">
+          <div class="config-actions">
+            <el-button type="primary" @click="exportConfig" :icon="Download" class="config-btn">
               导出配置
             </el-button>
-            <el-button :icon="Upload" @click="importConfig">
+            <el-button @click="importConfig" :icon="Upload" class="config-btn">
               导入配置
             </el-button>
-            <el-button :icon="Refresh" @click="resetConfig">
+            <el-button @click="resetConfig" :icon="Refresh" class="config-btn">
               重置默认
             </el-button>
+          </div>
+
+          <el-divider/>
+
+          <div class="quick-info">
+            <div class="info-title">当前状态</div>
+            <div class="info-row">
+              <span>选中关节:</span>
+              <el-tag size="small">{{ selectedJoints.length }} 个</el-tag>
+            </div>
+            <div class="info-row">
+              <span>平均位置:</span>
+              <el-tag size="small" type="success">{{ averagePosition }}%</el-tag>
+            </div>
+            <div class="info-row" v-if="outOfRangeJoints.length">
+              <span>超限关节:</span>
+              <el-tag size="small" type="danger">{{ outOfRangeJoints.length }} 个</el-tag>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 肌腱传动路径 -->
+        <el-card shadow="hover">
+          <template #header>
+            <span>肌腱传动</span>
+          </template>
+
+          <div class="tendon-diagram">
+            <svg viewBox="0 0 200 180" class="tendon-svg">
+              <!-- 舵机到关节的肌腱路径 -->
+              <g class="tendon-lines">
+                <!-- 拇指肌腱 -->
+                <path d="M30 160 Q50 100 80 80" stroke="#FF6B6B" stroke-width="2" fill="none"/>
+                <circle cx="80" cy="80" r="8" fill="#FF6B6B"/>
+                <text x="85" y="75" class="tendon-label" fill="#FF6B6B">T</text>
+
+                <!-- 食指肌腱 -->
+                <path d="M60 160 L60 60" stroke="#45B7D1" stroke-width="2" fill="none"/>
+                <circle cx="60" cy="60" r="8" fill="#45B7D1"/>
+                <text x="65" y="55" class="tendon-label" fill="#45B7D1">I</text>
+
+                <!-- 中指肌腱 -->
+                <path d="M90 160 L90 55" stroke="#90EE90" stroke-width="2" fill="none"/>
+                <circle cx="90" cy="55" r="8" fill="#90EE90"/>
+                <text x="95" y="50" class="tendon-label" fill="#90EE90">M</text>
+
+                <!-- 无名指肌腱 -->
+                <path d="M120 160 L120 60" stroke="#FFE4B5" stroke-width="2" fill="none"/>
+                <circle cx="120" cy="60" r="8" fill="#FFE4B5"/>
+                <text x="125" y="55" class="tendon-label" fill="#D4A574">R</text>
+
+                <!-- 小指肌腱 -->
+                <path d="M150 160 L150 70" stroke="#DDA0DD" stroke-width="2" fill="none"/>
+                <circle cx="150" cy="70" r="8" fill="#DDA0DD"/>
+                <text x="155" y="65" class="tendon-label" fill="#BA55D3">P</text>
+              </g>
+
+              <!-- 舵机框 -->
+              <rect x="10" y="150" width="180" height="25" rx="5" fill="#333" stroke="#555" stroke-width="1"/>
+              <text x="100" y="167" fill="#FFF" text-anchor="middle" font-size="12">舵机阵列 (7个)</text>
+            </svg>
+
+            <div class="tendon-legend">
+              <div class="legend-item">
+                <span class="legend-color" style="background:#FF6B6B">T</span>
+                <span>拇指</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background:#45B7D1">I</span>
+                <span>食指</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background:#90EE90">M</span>
+                <span>中指</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background:#FFE4B5">R</span>
+                <span>无名指</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background:#DDA0DD">P</span>
+                <span>小指</span>
+              </div>
+            </div>
           </div>
         </el-card>
       </div>
@@ -227,15 +428,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import * as echarts from 'echarts'
-import { Download, Upload, Refresh } from '@element-plus/icons-vue'
+import { ref, computed, onMounted, reactive } from 'vue'
+import { Refresh, Download, Upload } from '@element-plus/icons-vue'
 import {
   jointDefinitions,
-  presetActions,
-  getAllJointIds,
-  getFingerJointIds,
-  getThumbJointIds
+  presetActions
 } from '@/data/joint-mappings.js'
 import { useMultiJointMapping } from '@/composables/useJointMapping.js'
 import { useConfigStore } from '@/stores/config.js'
@@ -248,47 +445,35 @@ const LOG_LABEL = 'JointMapping'
 const configStore = useConfigStore()
 
 // 状态
-const selectedJoints = ref([0, 1, 2, 3, 4, 5, 6]) // 默认选择四指
-const positionPercent = ref(0)
+const selectedJoints = ref([0, 1, 2, 3, 4, 5, 6]) // 默认全选
+const jointPositions = reactive({}) // 各关节位置百分比 0-100
+const currentPreset = ref(null)
+const jointDetailVisible = ref(false)
+const selectedJointDetail = ref(null)
+
+// 计算器
+const calcInput = reactive({ angle: 0 })
+const calcResult = ref(null)
 
 // 多关节映射
 const {
   jointStates,
-  syncJointIds,
-  getStatesArray
+  syncJointIds
 } = useMultiJointMapping(selectedJoints.value)
 
-// 图表引用
-const comparisonChartRef = ref(null)
-const historyChartRef = ref(null)
-let comparisonChart = null
-let historyChart = null
-
-// 历史记录
-const positionHistory = ref([])
+// 初始化关节位置
+jointDefinitions.forEach(joint => {
+  jointPositions[joint.id] = 0
+})
 
 // ========== 计算属性 ==========
-
-function getJointName(jointId) {
-  const joint = jointDefinitions.find(j => j.id === jointId)
-  return joint ? joint.name : `关节 ${jointId}`
-}
-
-function getJointData(jointId) {
-  return jointStates.value[jointId]?.getStateSummary() || {}
-}
-
-function getJointConfig(jointId) {
-  return configStore.getJointConfig(jointId) || {}
-}
 
 const averagePosition = computed(() => {
   if (!selectedJoints.value.length) return 0
   const total = selectedJoints.value.reduce((sum, jointId) => {
-    const position = jointStates.value[jointId]?.positionPercent?.value ?? 0
-    return sum + position
+    return sum + (jointPositions[jointId] || 0)
   }, 0)
-  return Math.round((total / selectedJoints.value.length) * 100)
+  return Math.round(total / selectedJoints.value.length)
 })
 
 const outOfRangeJoints = computed(() => (
@@ -297,183 +482,161 @@ const outOfRangeJoints = computed(() => (
 
 // ========== 方法 ==========
 
-function formatTooltip(value) {
-  return `${value}%`
+function getJointAngle(jointId) {
+  const state = jointStates.value[jointId]?.getStateSummary()
+  return state ? Math.round(state.jointAngle || 0) : 0
 }
 
-function getProgressColor(percent) {
-  if (percent < 30) return '#67C23A'
-  if (percent < 70) return '#E6A23C'
-  return '#F56C6C'
+function getJointPulse(jointId) {
+  const state = jointStates.value[jointId]?.getStateSummary()
+  return state ? state.pulse : 0
 }
 
-function selectAll() {
-  selectedJoints.value = getAllJointIds()
+function getServoAngle(jointId) {
+  const state = jointStates.value[jointId]?.getStateSummary()
+  return state ? Math.round(state.servoAngle || 0) : 0
 }
 
-function selectFingers() {
-  selectedJoints.value = getFingerJointIds()
+function getJointConfig(jointId) {
+  return configStore.getJointConfig(jointId) || {}
 }
 
-function selectThumb() {
-  selectedJoints.value = getThumbJointIds()
+function selectJoint(jointId) {
+  selectedJointDetail.value = jointDefinitions.find(j => j.id === jointId)
+  jointDetailVisible.value = true
 }
 
-function selectWrist() {
-  selectedJoints.value = [6]
-}
-
-function clearAll() {
-  selectedJoints.value = []
-}
-
-function onPositionChange(value) {
-  updateJointsPosition(value / 100)
-
-  // 记录历史
-  positionHistory.value.push({
-    time: new Date().toLocaleTimeString(),
-    percent: value,
-    joints: getStatesArray()
-  })
-
-  // 限制历史记录数量
-  if (positionHistory.value.length > 20) {
-    positionHistory.value.shift()
-  }
-
-  updateCharts()
-}
-
-function updateJointsPosition(percent) {
-  selectedJoints.value.forEach(jointId => {
-    if (jointStates.value[jointId]) {
-      jointStates.value[jointId].setPosition(percent)
+function toggleJointSelection(jointId) {
+  const index = selectedJoints.value.indexOf(jointId)
+  if (index > -1) {
+    if (selectedJoints.value.length > 1) {
+      selectedJoints.value.splice(index, 1)
     }
-  })
+  } else {
+    selectedJoints.value.push(jointId)
+  }
+  syncJointIds(selectedJoints.value)
+}
+
+function onJointPositionChange(jointId, value) {
+  const percent = value / 100
+  if (jointStates.value[jointId]) {
+    jointStates.value[jointId].setPosition(percent)
+  }
 }
 
 function applyPreset(presetKey) {
   const preset = presetActions[presetKey]
   if (preset) {
+    currentPreset.value = presetKey
     preset.positions.forEach((pos, index) => {
+      jointPositions[index] = Math.round(pos * 100)
       if (jointStates.value[index]) {
         jointStates.value[index].setPosition(pos)
       }
     })
-
-    // 更新滑块（以第一个关节为准）
-    if (selectedJoints.value.length > 0) {
-      const firstJointId = selectedJoints.value[0]
-      const state = jointStates.value[firstJointId]?.getStateSummary()
-      if (state) {
-        positionPercent.value = Math.round(state.position * 100)
-      }
-    }
-
-    updateCharts()
   }
 }
 
-// ========== 图表 ==========
-
-function initComparisonChart() {
-  if (!comparisonChartRef.value) return
-
-  comparisonChart = echarts.init(comparisonChartRef.value)
-  updateComparisonChart()
-}
-
-function updateComparisonChart() {
-  if (!comparisonChart) return
-
-  const data = selectedJoints.value.map(jointId => {
-    const state = jointStates.value[jointId]?.getStateSummary()
-    const joint = jointDefinitions.find(j => j.id === jointId)
-    return {
-      name: joint ? joint.name : `关节${jointId}`,
-      value: state ? state.position * 100 : 0,
-      itemStyle: { color: joint ? joint.color : '#999' }
+function resetAllJoints() {
+  currentPreset.value = null
+  jointDefinitions.forEach(joint => {
+    jointPositions[joint.id] = 0
+    if (jointStates.value[joint.id]) {
+      jointStates.value[joint.id].setPosition(0)
     }
   })
-
-  comparisonChart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' }
-    },
-    xAxis: {
-      type: 'category',
-      data: data.map(d => d.name)
-    },
-    yAxis: {
-      type: 'value',
-      max: 100,
-      axisLabel: { formatter: '{value}%' }
-    },
-    series: [{
-      type: 'bar',
-      data: data.map(d => ({
-        value: d.value,
-        itemStyle: d.itemStyle
-      })),
-      barWidth: '60%'
-    }]
-  })
 }
 
-function initHistoryChart() {
-  if (!historyChartRef.value) return
+function calculateFromAngle() {
+  const jointId = selectedJoints.value[0] || 0
+  const config = getJointConfig(jointId)
+  if (!config.maxAngle) return
 
-  historyChart = echarts.init(historyChartRef.value)
-  updateHistoryChart()
+  const angle = calcInput.angle
+  const position = angle / config.maxAngle
+  const pulse = Math.round(position * (config.extendCount - config.graspCount) + config.graspCount)
+  const servoAngle = angle / config.gearRatio
+
+  calcResult.value = {
+    position: Math.round(position * 100),
+    pulse,
+    servoAngle: Math.round(servoAngle)
+  }
 }
 
-function updateHistoryChart() {
-  if (!historyChart) return
-
-  const times = positionHistory.value.map(h => h.time)
-  const series = selectedJoints.value.map(jointId => {
-    const joint = jointDefinitions.find(j => j.id === jointId)
-    return {
-      name: joint ? joint.name : `关节${jointId}`,
-      type: 'line',
-      data: positionHistory.value.map(h => {
-        const jointData = h.joints.find(j => j.jointId === jointId)
-        return jointData ? Math.round(jointData.position * 100) : 0
-      }),
-      smooth: true
-    }
-  })
-
-  historyChart.setOption({
-    tooltip: {
-      trigger: 'axis'
-    },
-    legend: {
-      data: series.map(s => s.name)
-    },
-    xAxis: {
-      type: 'category',
-      data: times
-    },
-    yAxis: {
-      type: 'value',
-      max: 100,
-      axisLabel: { formatter: '{value}%' }
-    },
-    series
-  })
+function getRangeWidth(joint) {
+  return '100%'
 }
 
-function updateCharts() {
-  updateComparisonChart()
-  updateHistoryChart()
+function getRangePosition(joint) {
+  const angle = getJointAngle(joint.id)
+  return (angle / joint.maxAngle) * 100
 }
+
+// ========== SVG 手部路径计算 ==========
+
+function getFingerPath(fingerId) {
+  const pos = jointPositions[fingerId] || 0
+  const angle = (pos / 100) * 150 // maxAngle is 150
+
+  const baseX = [145, 175, 205, 235][fingerId - 2] || 175
+  const baseY = 170
+
+  // 简化的手指路径
+  const fingerLength = 100
+  const bendAngle = (angle / 180) * Math.PI
+
+  const endX = baseX + Math.sin(bendAngle) * fingerLength
+  const endY = baseY + Math.cos(bendAngle) * fingerLength
+
+  // 绘制弯曲的手指
+  if (fingerId === 5) {
+    // 小指更短
+    return `M${baseX - 8} ${baseY}
+            Q${baseX - 10} ${baseY + 50} ${endX} ${endY}
+            Q${baseX + 8} ${baseY + 50} ${baseX + 8} ${baseY}
+            Z`
+  }
+
+  return `M${baseX - 10} ${baseY}
+          Q${baseX - 12} ${baseY + 50} ${endX} ${endY}
+          Q${baseX + 10} ${baseY + 50} ${baseX + 10} ${baseY}
+          Z`
+}
+
+function getFingerTextPos(fingerId) {
+  const baseX = [145, 175, 205, 235][fingerId - 2] || 175
+  return { x: baseX, y: 140 }
+}
+
+function getThumbBasePath() {
+  const pos = jointPositions[0] || 0
+  const angle = (pos / 100) * 45
+  return `M120 180 Q100 200 ${110 + angle} ${220 - angle} L140 210 Q130 195 130 180 Z`
+}
+
+function getThumbDistalPath() {
+  const pos = jointPositions[1] || 0
+  const angle = (pos / 100) * 60
+  const baseX = 125
+  const baseY = 210
+  return `M${baseX} ${baseY}
+          Q${baseX - 20} ${baseY + 30} ${baseX - 10 + angle} ${baseY + 50 + angle * 0.5}
+          Q${baseX + 15} ${baseY + 40} ${baseX + 10} ${baseY}
+          Z`
+}
+
+const thumbAngleText = computed(() => ({
+  x: 100,
+  y: 200
+}))
+
+// ========== 配置管理 ==========
 
 function exportConfig() {
   const config = configStore.exportConfig()
-  exportAsJSON(config, `aero-hand-config-${Date.now()}.json`)
+  exportAsJSON(config, `aero-hand-joint-config-${Date.now()}.json`)
 }
 
 async function importConfig() {
@@ -486,9 +649,7 @@ async function importConfig() {
       try {
         const data = await importFromJSON(file)
         configStore.importConfig(data)
-        // 刷新显示
-        updateJointsPosition(positionPercent.value / 100)
-        updateCharts()
+        Logger.info(LOG_LABEL, '配置导入成功')
       } catch (error) {
         Logger.error(LOG_LABEL, '导入配置失败:', error)
       }
@@ -499,298 +660,525 @@ async function importConfig() {
 
 function resetConfig() {
   configStore.resetAllConfig()
-  updateJointsPosition(positionPercent.value / 100)
-  updateCharts()
+  resetAllJoints()
+  Logger.info(LOG_LABEL, '配置已重置')
 }
 
 // ========== 生命周期 ==========
 
 onMounted(() => {
-  nextTick(() => {
-    initComparisonChart()
-    initHistoryChart()
-  })
-
-  window.addEventListener('resize', () => {
-    comparisonChart?.resize()
-    historyChart?.resize()
-  })
-})
-
-onUnmounted(() => {
-  comparisonChart?.dispose()
-  historyChart?.dispose()
-})
-
-// 监听选中关节变化
-watch(selectedJoints, () => {
   syncJointIds(selectedJoints.value)
-  updateCharts()
-}, { deep: true })
+})
 </script>
 
 <style scoped>
 .joint-mapping-page {
   padding: 20px;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .page-title {
   font-size: 20px;
   font-weight: 600;
+  color: white;
 }
 
 .mapping-container {
   display: grid;
-  grid-template-columns: 220px 1fr 280px;
+  grid-template-columns: 320px 1fr 300px;
   gap: 20px;
   margin-top: 20px;
 }
 
-.control-panel,
-.data-flow-panel,
-.visualization-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+/* 卡片通用样式 */
+:deep(.el-card) {
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.el-card__header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
 }
 
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.joint-selector {
+/* 手部可视化 */
+.hand-visualization-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
 }
 
-.joint-checkbox {
+.hand-svg-container {
+  background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hand-svg {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+}
+
+.angle-text {
+  font-size: 10px;
+  font-weight: bold;
+  fill: #333;
+  text-anchor: middle;
+}
+
+.wrist-text {
+  font-size: 12px;
+}
+
+.g.active path,
+.g.active rect {
+  filter: brightness(1.1);
+  stroke-width: 3;
+}
+
+.joint-detail-hint {
+  text-align: center;
+  color: #999;
+  font-size: 12px;
+  margin-top: 12px;
+  cursor: pointer;
+}
+
+.joint-detail-panel h4 {
+  margin: 0 0 4px 0;
+}
+
+.joint-detail-en {
+  color: #666;
+  font-size: 12px;
+  margin: 0;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
   margin-bottom: 8px;
 }
 
-.joint-item {
-  display: flex;
-  align-items: center;
+.detail-row span:first-child {
+  color: #666;
+}
+
+/* 舵机状态面板 */
+.servo-status-card :deep(.el-card__body) {
+  padding: 12px;
+}
+
+.servo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
-.joint-icon {
-  display: inline-block;
+.servo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #f5f7fa;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.servo-item:hover {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.servo-item.active {
+  background: white;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.servo-color {
   width: 12px;
   height: 12px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.joint-name-en {
-  color: #999;
-  font-size: 12px;
+.servo-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.position-control-card {
-  margin-top: auto;
+.servo-name {
+  font-size: 11px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.selection-summary {
-  margin-top: 16px;
-  padding: 12px;
-  border-radius: 8px;
-  background: #f5f7fa;
+.servo-angle {
+  font-size: 14px;
+  font-weight: bold;
+  color: #409EFF;
+}
+
+/* 控制面板 */
+.control-panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
-  color: #606266;
+  gap: 16px;
 }
 
-.summary-row {
+.joint-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.joint-control-item {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.joint-control-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.joint-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.joint-control-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.joint-control-en {
+  color: #999;
+  font-size: 11px;
+}
+
+.slider-container {
+  margin-bottom: 8px;
+}
+
+.slider-labels {
   display: flex;
   justify-content: space-between;
+  font-size: 10px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.current-angle {
+  font-weight: bold;
+  color: #409EFF;
+}
+
+.joint-info-row {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.info-label {
+  color: #999;
+}
+
+.info-value {
+  font-weight: 600;
+  color: #333;
+}
+
+/* 计算器 */
+.calculator {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calc-row {
+  display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.summary-label {
-  font-weight: 600;
+.calc-label {
+  color: #666;
+  font-size: 13px;
+  flex: 1;
 }
 
-.summary-value {
+.calc-result {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: #f5f7fa;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.calc-result-item {
+  text-align: center;
+}
+
+.calc-result-item span:first-child {
+  display: block;
+  font-size: 11px;
+  color: #666;
+}
+
+.calc-result-item span:last-child {
+  font-size: 16px;
+  font-weight: bold;
   color: #409EFF;
-  font-weight: 600;
 }
 
-.position-control {
-  margin-bottom: 30px;
+/* 坐标系说明 */
+.coordinate-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.preset-actions {
-  border-top: 1px solid #eee;
-  padding-top: 20px;
+.coord-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
 }
 
-.preset-title {
-  font-weight: 600;
-  margin-bottom: 15px;
-  color: #606266;
+.coord-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  flex-shrink: 0;
 }
 
-.preset-buttons {
+.coord-text {
+  font-size: 12px;
+}
+
+.coord-text strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.coord-text p {
+  margin: 0;
+  color: #666;
+}
+
+/* 预设面板 */
+.preset-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.preset-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 
-.data-flow-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.preset-item {
+  background: #f5f7fa;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
 }
 
-.data-layer {
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 15px;
-  background: #fafafa;
+.preset-item:hover {
+  background: white;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.layer-title {
+.preset-item.active {
+  border-color: #409EFF;
+  background: white;
+}
+
+.preset-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.preset-name {
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 12px;
-  color: #409EFF;
 }
 
-.layer-content {
+.preset-name-en {
+  font-size: 10px;
+  color: #999;
+}
+
+/* 运动范围 */
+.range-chart {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.data-item {
+.range-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.data-label {
-  color: #606266;
-  font-size: 14px;
-}
-
-.data-value {
-  color: #409EFF;
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.joint-data {
-  padding: 10px;
-  background: white;
-  border-radius: 6px;
-  margin-bottom: 8px;
-}
-
-.joint-name {
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #303133;
+.range-label {
   display: flex;
   align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.range-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.range-bar-container {
+  position: relative;
+  height: 8px;
+  background: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.range-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.range-indicator {
+  position: absolute;
+  top: -2px;
+  width: 4px;
+  height: 12px;
+  background: #333;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  transition: left 0.3s;
+}
+
+.range-value {
+  font-size: 10px;
+  color: #666;
+  text-align: right;
+}
+
+/* 配置管理 */
+.config-actions {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.data-rows {
+.config-btn {
+  width: 100%;
+}
+
+.quick-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
-.data-row {
+.info-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.info-row {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: 12px;
 }
 
-.warning-row .data-label,
-.warning-text {
-  color: #F56C6C;
-  font-weight: 600;
-}
-
-.warning-tag {
-  margin-left: auto;
-}
-
-.config-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+/* 肌腱传动图 */
+.tendon-diagram {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
-.config-data {
-  padding: 10px;
-  background: white;
-  border-radius: 6px;
-  margin-bottom: 8px;
-}
-
-.config-title {
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #E6A23C;
-}
-
-.visualization-content {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-
-.chart-section {
-  min-height: 180px;
-}
-
-.chart-title {
-  font-weight: 600;
-  margin-bottom: 15px;
-  color: #606266;
-}
-
-.chart {
+.tendon-svg {
   width: 100%;
-  height: 200px;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 
-.export-card {
-  margin-top: auto;
+.tendon-label {
+  font-size: 8px;
+  font-weight: bold;
 }
 
-.export-buttons {
+.tendon-legend {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  justify-content: space-around;
 }
 
-.export-buttons .el-button {
-  width: 100%;
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
 }
 
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 9px;
+  font-weight: bold;
+}
+
+/* 响应式 */
 @media (max-width: 1400px) {
   .mapping-container {
     grid-template-columns: 1fr 1fr;
   }
 
-  .visualization-panel {
+  .preset-panel {
     grid-column: 1 / -1;
   }
 }

@@ -1,11 +1,12 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    title="🔍 全局搜索"
-    width="600px"
+    title="全局搜索"
+    width="620px"
     :close-on-click-modal="true"
     class="global-search-dialog"
     @keydown="handleKeydown"
+    destroy-on-close
   >
     <!-- 搜索输入 -->
     <div class="search-input-wrapper">
@@ -15,6 +16,7 @@
         placeholder="输入关键词搜索..."
         size="large"
         clearable
+        autofocus
         @input="handleSearch"
         @keydown.enter="handleEnter"
         @keydown.up.prevent="handleUp"
@@ -24,14 +26,10 @@
         <template #prefix>
           <el-icon><Search /></el-icon>
         </template>
+        <template #suffix v-if="searchQuery">
+          <el-icon class="clear-icon" @click="clearSearch"><CircleClose /></el-icon>
+        </template>
       </el-input>
-    </div>
-
-    <!-- 快捷键提示 -->
-    <div class="search-hints">
-      <span class="hint"><kbd>↑↓</kbd> 导航</span>
-      <span class="hint"><kbd>Enter</kbd> 跳转</span>
-      <span class="hint"><kbd>Esc</kbd> 关闭</span>
     </div>
 
     <!-- 搜索结果 -->
@@ -42,43 +40,61 @@
       </div>
 
       <div v-else-if="results.length === 0" class="search-empty">
-        <el-empty description="未找到相关结果" :image-size="80" />
+        <el-empty description="未找到相关结果" :image-size="80">
+          <template #image>
+            <el-icon :size="60" color="#c0c4cc"><Search /></el-icon>
+          </template>
+        </el-empty>
+        <p class="empty-tip">试试其他关键词</p>
       </div>
 
-      <div v-else class="results-list">
-        <div
-          v-for="(result, index) in results"
-          :key="result.id"
-          :class="['result-item', { highlighted: index === highlightedIndex }]"
-          @click="selectResult(result)"
-          @mouseenter="highlightedIndex = index"
-        >
-          <div class="result-icon">
-            <el-icon><component :is="getIcon(result.type)" /></el-icon>
-          </div>
-          <div class="result-content">
-            <div class="result-title" v-html="highlightKeyword(result.title)"></div>
-            <div class="result-description" v-html="highlightKeyword(result.description)"></div>
-            <div class="result-meta">
-              <el-tag size="small" :type="getTypeColor(result.type)">
-                {{ getTypeLabel(result.type) }}
-              </el-tag>
-              <span v-if="result.path" class="result-path">{{ result.path }}</span>
+      <div v-else class="results-container">
+        <div class="results-header">
+          <span class="results-count">找到 {{ results.length }} 个结果</span>
+        </div>
+        <div class="results-list">
+          <div
+            v-for="(result, index) in results"
+            :key="result.id"
+            :class="['result-item', { highlighted: index === highlightedIndex }]"
+            @click="selectResult(result)"
+            @mouseenter="highlightedIndex = index"
+          >
+            <div class="result-icon" :class="`type-${result.type}`">
+              <el-icon><component :is="getIcon(result.type)" /></el-icon>
             </div>
-          </div>
-          <div class="result-arrow">
-            <el-icon><ArrowRight /></el-icon>
+            <div class="result-content">
+              <div class="result-title" v-html="highlightKeyword(result.title)"></div>
+              <div class="result-description" v-html="highlightKeyword(result.description)"></div>
+              <div class="result-meta">
+                <el-tag size="small" :type="getTypeColor(result.type)" effect="light">
+                  <el-icon><component :is="getIcon(result.type)" /></el-icon>
+                  {{ getTypeLabel(result.type) }}
+                </el-tag>
+                <span v-if="result.path" class="result-path">
+                  <el-icon><Location /></el-icon>
+                  {{ result.path }}
+                </span>
+              </div>
+            </div>
+            <div class="result-action">
+              <el-icon><ArrowRight /></el-icon>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 搜索历史 -->
-    <div v-else class="search-history">
+    <!-- 搜索历史和建议 -->
+    <div v-else class="search-empty-state">
+      <!-- 搜索历史 -->
       <div v-if="recentSearches.length > 0" class="history-section">
         <div class="section-header">
-          <span class="section-title">最近搜索</span>
-          <el-button text size="small" @click="clearHistory">清空</el-button>
+          <span class="section-title">
+            <el-icon><Clock /></el-icon>
+            最近搜索
+          </span>
+          <el-button text size="small" @click="clearHistory" type="danger">清空</el-button>
         </div>
         <div class="history-tags">
           <el-tag
@@ -97,7 +113,10 @@
       <!-- 搜索建议 -->
       <div class="suggestions-section">
         <div class="section-header">
-          <span class="section-title">快捷搜索</span>
+          <span class="section-title">
+            <el-icon><TrendCharts /></el-icon>
+            快捷搜索
+          </span>
         </div>
         <div class="suggestion-list">
           <div
@@ -111,6 +130,13 @@
           </div>
         </div>
       </div>
+
+      <!-- 快捷键提示 -->
+      <div class="shortcuts-hint">
+        <span class="hint"><kbd>↑</kbd><kbd>↓</kbd> 导航</span>
+        <span class="hint"><kbd>Enter</kbd> 跳转</span>
+        <span class="hint"><kbd>Esc</kbd> 关闭</span>
+      </div>
     </div>
   </el-dialog>
 </template>
@@ -120,9 +146,9 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSearchStore } from '@/stores/search'
 import {
-  Search, Loading, ArrowRight,
+  Search, Loading, ArrowRight, CircleClose, Location,
   Document, Odometer, Box, Notebook, Connection,
-  Clock, Promotion, Setting, Box as BoxIcon, Cpu
+  Clock, Promotion, Setting, Box as BoxIcon, Cpu, TrendCharts
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -204,6 +230,14 @@ watch(dialogVisible, (val) => {
   }
 })
 
+// 清空搜索
+function clearSearch() {
+  searchQuery.value = ''
+  results.value = []
+  highlightedIndex.value = -1
+  searchInputRef.value?.focus()
+}
+
 // 搜索处理
 let searchTimeout = null
 function handleSearch() {
@@ -216,6 +250,7 @@ function handleSearch() {
   }
 
   isSearching.value = true
+  highlightedIndex.value = -1
 
   searchTimeout = setTimeout(() => {
     // 模拟搜索结果
@@ -224,7 +259,7 @@ function handleSearch() {
     results.value = mockResults
     highlightedIndex.value = mockResults.length > 0 ? 0 : -1
     isSearching.value = false
-  }, 200)
+  }, 150)
 }
 
 // 生成模拟搜索结果
@@ -249,8 +284,13 @@ function generateMockResults(query) {
 // 高亮关键词
 function highlightKeyword(text) {
   if (!text || !searchQuery.value) return text
-  const regex = new RegExp(`(${searchQuery.value})`, 'gi')
+  const regex = new RegExp(`(${escapeRegex(searchQuery.value)})`, 'gi')
   return text.replace(regex, '<mark>$1</mark>')
+}
+
+// 转义正则特殊字符
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 // 键盘事件处理
@@ -279,11 +319,22 @@ function handleUp() {
   highlightedIndex.value = highlightedIndex.value <= 0
     ? results.value.length - 1
     : highlightedIndex.value - 1
+  scrollToHighlighted()
 }
 
 function handleDown() {
   if (results.value.length === 0) return
   highlightedIndex.value = (highlightedIndex.value + 1) % results.value.length
+  scrollToHighlighted()
+}
+
+function scrollToHighlighted() {
+  nextTick(() => {
+    const highlighted = resultsRef.value?.querySelector('.result-item.highlighted')
+    if (highlighted) {
+      highlighted.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  })
 }
 
 function handleEnter() {
@@ -298,7 +349,9 @@ function handleEsc() {
 
 function selectResult(result) {
   // 添加到历史
-  searchStore.addToHistory(searchQuery.value)
+  if (searchQuery.value.trim()) {
+    searchStore.addToHistory(searchQuery.value.trim())
+  }
 
   // 跳转到对应页面
   if (result.path) {
@@ -324,41 +377,43 @@ defineExpose({
   },
   close: () => {
     dialogVisible.value = false
-  }
+  },
+  isVisible: () => dialogVisible.value
 })
 </script>
 
 <style scoped>
 .search-input-wrapper {
-  margin-bottom: 12px;
-}
-
-.search-hints {
-  display: flex;
-  gap: 16px;
   margin-bottom: 16px;
-  padding: 8px 12px;
-  background: #f5f7fa;
-  border-radius: 6px;
-  font-size: 12px;
+  position: relative;
 }
 
-.hint {
+.search-input-wrapper :deep(.el-input__wrapper) {
+  padding: 12px 16px;
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+.search-input-wrapper :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.search-input-wrapper :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.clear-icon {
+  cursor: pointer;
+  color: #c0c4cc;
+  transition: color 0.2s;
+}
+
+.clear-icon:hover {
   color: #909399;
 }
 
-.hint kbd {
-  display: inline-block;
-  padding: 2px 6px;
-  background: white;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  font-family: monospace;
-  margin-right: 4px;
-}
-
 .search-results {
-  max-height: 400px;
+  max-height: 420px;
   overflow-y: auto;
 }
 
@@ -372,8 +427,30 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  color: #909399;
+  gap: 10px;
+  color: var(--text-secondary, #909399);
+}
+
+.empty-tip {
+  color: var(--text-secondary, #909399);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.results-container {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.results-header {
+  padding: 8px 12px;
+  background: var(--bg-hover, #f5f7fa);
+  border-radius: 8px 8px 0 0;
+}
+
+.results-count {
+  font-size: 12px;
+  color: var(--text-secondary, #909399);
 }
 
 .results-list {
@@ -385,33 +462,61 @@ defineExpose({
 .result-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 14px;
+  padding: 14px 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
 }
 
 .result-item:hover,
 .result-item.highlighted {
-  background: #f5f7fa;
+  background: var(--bg-hover, #f5f7fa);
 }
 
 .result-item.highlighted {
-  background: #ecf5ff;
-  border-left: 3px solid #409eff;
+  background: rgba(102, 126, 234, 0.08);
+  border-left: 3px solid var(--primary-color, #667eea);
+  padding-left: 9px;
 }
 
 .result-icon {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f9ff;
-  border-radius: 8px;
-  color: #409eff;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 10px;
+  color: var(--primary-color, #667eea);
   font-size: 20px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.result-item:hover .result-icon,
+.result-item.highlighted .result-icon {
+  transform: scale(1.05);
+}
+
+.result-icon.type-hardware {
+  background: linear-gradient(135deg, rgba(230, 162, 60, 0.1) 0%, rgba(245, 108, 108, 0.1) 100%);
+  color: #e6a23c;
+}
+
+.result-icon.type-task {
+  background: linear-gradient(135deg, rgba(103, 194, 58, 0.1) 0%, rgba(82, 196, 26, 0.1) 100%);
+  color: #67c23a;
+}
+
+.result-icon.type-article {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%);
+  color: #409eff;
+}
+
+.result-icon.type-doc {
+  background: linear-gradient(135deg, rgba(144, 147, 153, 0.1) 0%, rgba(96, 98, 102, 0.1) 100%);
+  color: #909399;
 }
 
 .result-content {
@@ -421,41 +526,62 @@ defineExpose({
 
 .result-title {
   font-weight: 600;
-  color: #303133;
+  color: var(--text-primary, #303133);
   margin-bottom: 4px;
+  font-size: 15px;
 }
 
 .result-title :deep(mark) {
-  background: #fef0b3;
-  padding: 0 2px;
-  border-radius: 2px;
+  background: rgba(245, 208, 50, 0.3);
+  padding: 1px 3px;
+  border-radius: 3px;
 }
 
 .result-description {
   font-size: 13px;
-  color: #909399;
-  margin-bottom: 6px;
+  color: var(--text-secondary, #909399);
+  margin-bottom: 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.4;
 }
 
 .result-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.result-meta .el-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .result-path {
   font-size: 12px;
-  color: #c0c4cc;
+  color: var(--text-secondary, #c0c4cc);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
-.result-arrow {
-  color: #c0c4cc;
+.result-action {
+  color: var(--text-secondary, #c0c4cc);
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: all 0.2s ease;
 }
 
-.search-history {
+.result-item:hover .result-action,
+.result-item.highlighted .result-action {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* 空状态样式 */
+.search-empty-state {
   max-height: 400px;
   overflow-y: auto;
 }
@@ -474,7 +600,11 @@ defineExpose({
 
 .section-title {
   font-weight: 600;
-  color: #303133;
+  color: var(--text-primary, #303133);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .history-tags {
@@ -485,6 +615,11 @@ defineExpose({
 
 .history-tag {
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-tag:hover {
+  transform: translateY(-1px);
 }
 
 .suggestion-list {
@@ -498,18 +633,58 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: #f5f7fa;
-  border-radius: 6px;
+  background: var(--bg-hover, #f5f7fa);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  color: var(--text-regular, #606266);
 }
 
 .suggestion-item:hover {
-  background: #ecf5ff;
-  color: #409eff;
+  background: rgba(102, 126, 234, 0.1);
+  color: var(--primary-color, #667eea);
+  transform: translateY(-1px);
+}
+
+/* 快捷键提示 */
+.shortcuts-hint {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 12px;
+  background: var(--bg-hover, #f5f7fa);
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.shortcuts-hint .hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary, #909399);
+}
+
+.shortcuts-hint kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-color, #dcdfe6);
+  border-radius: 4px;
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 11px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 :deep(.global-search-dialog) {
-  border-radius: 12px;
+  border-radius: 14px;
+}
+
+:deep(.global-search-dialog .el-dialog__header) {
+  padding: 16px 20px 0;
+}
+
+:deep(.global-search-dialog .el-dialog__body) {
+  padding: 20px;
 }
 </style>

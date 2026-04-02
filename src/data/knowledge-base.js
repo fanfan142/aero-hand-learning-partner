@@ -1,6 +1,11 @@
 /**
  * Aero Hand 学习知识库
  * 包含完整的技术原理、架构说明、代码示例
+ *
+ * 结构说明：
+ * - 每个知识点包含：基础概念 → 原理详解 → 实际应用 → 代码示例
+ * - [进阶] 标记的内容供高级用户深入学习
+ * - 包含常见问题和故障排查章节
  */
 
 export const knowledgeCategories = [
@@ -13,64 +18,284 @@ export const knowledgeCategories = [
       {
         id: 'overview',
         title: '整体架构概览',
+        summary: '理解 Aero Hand Open 各组件之间的关系和数据流，掌握从应用到硬件的完整控制路径。',
+        tags: ['架构', '概述'],
         content: `
 ## 系统组成
 
-Aero Hand Open 由 5 个核心模块组成：
+Aero Hand Open 由 5 个核心模块组成，每一层都有其独特的职责和设计考量：
 
 \`\`\`
-┌─────────────────────────────────────────────────┐
-│                    上层应用                       │
-│  (RL训练、遥操作、任务执行)                      │
-└─────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────┐
-│              SDK / ROS2 接口层                   │
-│  Python API、ROS2话题、服务                      │
-└─────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────┐
-│                  ESP32 固件                      │
-│  串口协议、舵机控制、归位逻辑                     │
-└─────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────┐
-│              HLS3606M 舵机阵列                   │
-│  7个智能总线舵机（PWM控制）                      │
-└─────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────┐
-│               肌腱驱动机械结构                    │
-│  3D打印部件、肌腱、滑轮系统                       │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                        上层应用                           │
+│          (RL训练、遥操作、任务执行、视觉反馈)              │
+│    例如：PPO训练脚本、遥操作界面、抓取规划器               │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│                   SDK / ROS2 接口层                      │
+│        Python API、ROS2话题、服务、动作服务器              │
+│    提供：set_joint_positions()、get_joint_states()       │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│                        ESP32 固件                         │
+│     串口协议编解码、舵机PWM生成、归位逻辑、EEPROM存储      │
+│     实时性要求：控制周期 ≤ 10ms                           │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│                    HLS3606M 舵机阵列                      │
+│         7个智能总线舵机、4096级精度、串联总线             │
+│         通信：9600bps，指令响应延迟约 2ms                 │
+└─────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────┐
+│                     肌腱驱动机械结构                       │
+│          3D打印部件、肌腱绳、滑轮系统、关节约束             │
+│     力学特性：肌腱只能拉不能推、欠驱动、耦合运动           │
+└─────────────────────────────────────────────────────────┘
 \`\`\`
 
-## 数据流向
+## 数据流向详解
 
 ### 控制流（从上到下）
+
+控制命令从用户指令到手指运动的完整路径：
+
 \`\`\`
-用户指令 → SDK → 串口协议 → ESP32 → 舵机PWM → 手指运动
+1. 用户/算法
+   └─→ 生成目标关节位置 [0, 30, 45, 50, 55, 50, 40]（百分比）
+
+2. SDK 层 (aero_open_sdk)
+   ├─→ 位置验证：确保所有值在 0-100 范围内
+   ├─→ 映射计算：将百分比转换为舵机计数值
+   │    例如：50% → count = extend_count + (grasp_count - extend_count) * 0.5
+   └─→ 协议封装：构建 16 字节数据包
+
+3. 串口通信 (USB-UART)
+   ├─→ 波特率：921600 bps（高速，减少延迟）
+   ├─→ 帧格式：8N1（8数据位、无校验、1停止位）
+   └─→ 传输时间：每帧约 0.14ms
+
+4. ESP32 固件
+   ├─→ 帧解析：提取命令码和数据载荷
+   ├─→ 指令执行：更新舵机目标位置
+   └─→ PWM 生成：向舵机总线发送位置指令
+
+5. HLS3606M 舵机
+   ├─→ 接收指令：解析总线上的串行数据
+   ├─→ 内部控制：PID 控制电机到达目标位置
+   └─→ 物理运动：电机驱动滑轮，牵拉肌腱
+
+6. 机械结构
+   └─→ 肌腱传动 → 关节旋转 → 手指运动
 \`\`\`
 
 ### 反馈流（从下到上）
+
+状态信息从手指运动返回到用户界面的完整路径：
+
 \`\`\`
-舵机位置 → 串口反馈 → SDK → 状态读取 → 用户界面
+1. HLS3606M 舵机
+   ├─→ 位置传感器：12位 ADC，精度 4096 级
+   ├─→ 当前角度：0-360° 对应 0-4095 计数
+   └─→ 负载感知：检测堵转和异常
+
+2. ESP32 固件
+   ├─→ 查询指令：定期轮询各舵机状态
+   ├─→ 数据整合：收集 7 个舵机的位置/负载
+   └─→ 状态封装：构建反馈数据包
+
+3. SDK 层
+   ├─→ 帧解析：从串口读取反馈数据
+   ├─→ 校验检查：验证数据完整性
+   └─→ 逆映射：将计数值转换回百分比
+
+4. 用户/算法
+   └─→ 获取状态：joint_positions = [45, 32, 47, 51, 54, 48, 38]
 \`\`\`
 
-## 各层职责
+## 各层职责详解
 
-| 层级 | 职责 | 技术 |
-|------|------|------|
-| **应用层** | 实现具体任务（抓取、操作等） | Python, C++, JAX |
-| **接口层** | 提供标准化的控制API | Python SDK, ROS2 |
-| **固件层** | 实时控制、串口通信 | C++ (Arduino) |
-| **驱动层** | 执行运动指令 | Feetech HLS3606M |
-| **机械层** | 传递运动、产生抓取力 | 肌腱、滑轮、3D件 |
+| 层级 | 职责 | 技术实现 | 关键考量 |
+|------|------|----------|----------|
+| **应用层** | 实现具体任务（抓取、操作等） | Python, C++, JAX | 任务泛化能力、奖励函数设计 |
+| **接口层** | 提供标准化的控制API | Python SDK, ROS2 | API 易用性、错误处理 |
+| **固件层** | 实时控制、串口通信 | C++ (Arduino) | 实时性 ≤10ms、协议稳定 |
+| **驱动层** | 执行运动指令 | Feetech HLS3606M | 精度、响应速度、可靠性 |
+| **机械层** | 传递运动、产生抓取力 | 肌腱、滑轮、3D件 | 效率、死区、寿命 |
+
+## 设计哲学
+
+### 为什么选择肌腱驱动？
+
+\`\`\`
+肌腱驱动 vs 直接驱动 对比：
+
+肌腱驱动优势：
+✓ 轻量化：执行器可放在手掌外
+✓ 紧凑性：关节处无需大电机
+✓ 仿生性：更接近人手结构
+✓ 成本低：7个小电机 vs 7个大电机
+
+肌腱驱动挑战：
+✗ 非线性：肌腱拉伸、摩擦损耗
+✗ 欠驱动：手指间存在耦合
+✗ 调试复杂：预紧力难以精确设置
+✗ 寿命问题：绳索磨损
+\`\`\`
+
+### 为什么选择 ESP32-S3？
+
+\`\`\`
+选择理由：
+1. 双核处理器 - 一个核处理通信，一个核处理控制
+2. 丰富的外设 - UART、I2C、PWM 全部内置
+3. WiFi/BT 支持 - 未来可扩展无线控制
+4. 低成本 - 约 $5/片
+5. 生态成熟 - Arduino 支持完善
+
+性能参数：
+- 主频：240MHz
+- SRAM：512KB
+- Flash：4MB（外部）
+- UART：3个硬件 UART
+\`\`\`
+
+### 通信协议设计考量
+
+选择 16 字节固定帧格式的原因：
+
+\`\`\`
+1. 确定性：固定长度易于解析和校验
+2. 效率：避免变长帧的解析开销
+3. 可靠性：固定格式便于实现 CRC 校验
+4. 实时性：确定性的传输时间
+
+帧结构设计：
+- 帧头 0x7E：明确标记帧开始
+- 命令码：一个字节，区分不同指令
+- 数据载荷：12字节，足够承载 7 个舵机位置
+- 校验和：简单的 XOR 校验
+- 帧尾 0x7E：确认帧完整
+
+为什么不用标准协议（如 Modbus）？
+- Modbus 太复杂，很多功能用不到
+- 自定义协议更紧凑
+- 可以根据需求灵活扩展
+\`\`\`
+
+---
+
+## [进阶] 延迟分析
+
+### 控制延迟来源
+
+\`\`\`
+总延迟 = Σ(各层延迟)
+
+典型延迟分解：
+┌──────────────────────────────────────────────────────────────┐
+│ 1. SDK处理延迟        ~1ms                                   │
+│    - 位置验证、映射计算、协议封装                              │
+├──────────────────────────────────────────────────────────────┤
+│ 2. USB/UART传输延迟    ~0.15ms (16字节 @ 921600 bps)          │
+│    - 实际传输时间 = 帧长×8/波特率                              │
+│    - 理论值 = 16×8/921600 ≈ 0.139ms                          │
+├──────────────────────────────────────────────────────────────┤
+│ 3. ESP32帧解析延迟    ~0.1ms                                  │
+│    - 固定开销                                                         │
+├──────────────────────────────────────────────────────────────┤
+│ 4. 舵机指令处理延迟    ~2ms (HLS3606M响应时间)                 │
+│    - 舵机内部处理、PID计算                                      │
+├──────────────────────────────────────────────────────────────┤
+│ 5. 舵机运动时间        200-1000ms (取决于运动幅度)            │
+│    - 这是主要延迟来源！                                          │
+└──────────────────────────────────────────────────────────────┘
+
+结论：对于位置控制类任务，舵机物理运动时间是主导因素（90%+）
+      通信延迟（<5ms）对整体性能影响很小
+\`\`\`
+
+### 带宽计算
+
+\`\`\`
+理论带宽：
+- 921600 bps = 115200 bytes/s
+- 每帧16字节 = 7200帧/秒
+- 每帧控制7个舵机 = 50400个舵机位置/秒
+
+实际使用（考虑反馈）：
+- 控制频率：20Hz（50ms周期）
+- 每次发送+接收：32字节
+- 实际带宽利用率：32×20 = 640 bytes/s = 0.56%
+
+结论：通信带宽非常充裕，不是瓶颈
+\`\`\`
+
+---
+
+## 常见问题
+
+### Q1: 控制指令没有生效？
+
+**排查步骤：**
+\`\`\`
+1. 检查串口连接
+   └─→ hand.serial.is_open 是否为 True
+
+2. 检查固件运行状态
+   └─→ 发送0x30归位命令，看舵机是否有反应
+
+3. 检查舵机供电
+   └─→ 5V 3A电源是否连接
+   └─→ 单独测试舵机（连接一个舵机）
+
+4. 检查端点配置
+   └─→ extend_count 和 grasp_count 是否合理
+\`\`\`
+
+### Q2: 舵机运动不平滑？
+
+**原因分析：**
+\`\`\`
+1. 控制频率太低
+   └─→ 增加发送频率（当前20Hz可以提高到50Hz）
+
+2. 命令间隔不均匀
+   └→ 使用定时器而非 sleep()
+
+3. 目标位置变化太大
+   └→ 使用轨迹插值（见SDK代码示例）
+
+4. 肌腱打滑
+   └→ 检查肌腱张力，重新预紧
+\`\`\`
+
+### Q3: 手指抖动？
+
+**可能原因：**
+\`\`\`
+1. 肌腱太松
+   └→ 增加预紧力
+
+2. 控制信号干扰
+   └→ 检查USB线质量，加磁环
+
+3. PID参数不合适 [进阶]
+   └→ 调整舵机内部P/I参数（需要Feetech软件）
+
+4. 关节摩擦不均匀
+   └→ 润滑关节，检查3D打印件质量
+\`\`\`
         `
       },
       {
         id: 'firmware-architecture',
         title: '固件架构详解',
+        summary: '深入解析 ESP32 固件的核心模块：串口协议、舵机控制、归位程序的实现原理。',
+        tags: ['固件', 'ESP32', '架构'],
         content: `
 ## ESP32 固件核心模块
 
@@ -97,6 +322,188 @@ struct SerialPacket {
 | 0x20 | 保存端点配置 | [配置数据] |
 | 0x30 | 开始归位 | 无 |
 | 0x31 | 停止归位 | 无 |
+
+---
+
+## [进阶] 串口协议时序详解
+
+### 完整通信时序图
+
+\`\`\`
+发送命令（SDK → ESP32）：
+═══════════════════════════════════════════════════════════
+
+     ┌─────┐ ┌────┐ ┌──────────┐ ┌─────────┐ ┌────┐ ┌─────┐
+     │0x7E │ │CMD │ │  DATA    │ │ CHECKSUM│ │0x7E│ │空闲 │
+     └──┬──┘ └──┬─┘ └────┬─────┘ └───┬───┘ └──┬──┘ └──┬──┘
+        │       │        │           │        │       │
+        ▼       ▼        ▼           ▼        ▼       ▼
+     ───┴───┬───┴───┬───┴─────┬─────┴───┬───┴───┬───┴─────────
+     帧头   命令   数据[0-11]  校验和   帧尾    空闲
+     1字节  1字节   12字节     1字节    1字节  ≥1字节
+
+接收响应（ESP32 → SDK）：
+═══════════════════════════════════════════════════════════
+
+     ┌─────┐ ┌────┐ ┌──────────┐ ┌─────────┐ ┌────┐
+     │0x7E │ │ACK │ │  STATUS  │ │ CHECKSUM│ │0x7E│
+     └──┬──┘ └──┬─┘ └────┬─────┘ └───┬───┘ └──┬──┘
+        │       │        │           │        │
+        ▼       ▼        ▼           ▼        ▼
+     ───┴───┬───┴───┬───┴─────┬─────┴───┬───┴─────────
+     帧头   命令   状态数据   校验和   帧尾
+     1字节  1字节   N字节     1字节    1字节
+
+注意：响应帧长度可能与命令帧不同！
+\`\`\`
+
+### 数据帧格式详解
+
+#### 设置多关节位置命令 (0x01)
+
+\`\`\`
+字节索引： 0     1      2-13         14      15
+           │     │      │            │       │
+           ▼     ▼      ▼            ▼       ▼
+        ┌─────┬────┬─────────────┬────────┬─────┐
+        │0x7E │0x01│D0 D1...D11 │ CHECK  │0x7E │
+        └─────┴────┴─────────────┴────────┴─────┘
+
+数据字段 D0-D11 含义：
+┌─────────────────────────────────────────────────────────────┐
+│ D0      = 舵机0 ID (0-6)                                    │
+│ D1-D2   = 舵机0 位置（低字节在前，16位）                     │
+│ D3      = 舵机1 ID                                          │
+│ D4-D5   = 舵机1 位置                                        │
+│ ...                                                         │
+│ D9      = 舵机3 ID                                          │
+│ D10-D11 = 舵机3 位置 (或保留，若不足6个舵机)                 │
+└─────────────────────────────────────────────────────────────┘
+
+位置计算公式：
+position = D[n+1] | (D[n+2] << 8)  // 小端序
+
+示例：设置舵机0到位置2000
+D0 = 0x00 (舵机ID)
+D1 = 0xD0 (2000低字节)  = 0x07D0 = 208
+D2 = 0x07 (2000高字节)  = 0x07 << 8 = 1792
+合计 = 208 + 1792 = 2000 ✓
+\`\`\`
+
+#### 读取舵机位置命令 (0x10)
+
+\`\`\`
+发送：
+字节： 0     1      2        3      4     5
+        │     │      │        │      │     │
+        ▼     ▼      ▼        ▼      ▼     ▼
+     ┌─────┬────┬────────┬────────┬────┐
+     │0x7E │0x10│ SERVO_ID│CHECK │0x7E│
+     └─────┴────┴────────┴────────┴────┘
+
+响应：
+字节： 0     1      2-3       4      5
+        │     │      │        │      │
+        ▼     ▼      ▼        ▼      ▼
+     ┌─────┬────┬────────┬────────┬────┐
+     │0x7E │0x10│ POS_L|H│CHECK │0x7E│
+     └─────┴────┴────────┴────────┴────┘
+\`\`\`
+
+---
+
+## [进阶] CRC/XOR 校验详解
+
+### 校验算法原理
+
+\`\`\`
+校验计算方法：XOR（异或）校验
+
+计算公式：
+checksum = CMD ^ DATA[0] ^ DATA[1] ^ ... ^ DATA[11]
+
+示例计算过程：
+────────────────
+CMD    = 0x01
+DATA[0]= 0x00  (舵机0 ID)
+DATA[1]= 0xD0  (位置低字节)
+DATA[2]= 0x07  (位置高字节)
+DATA[3-11] = 0x00
+
+计算：
+step1 = 0x01 ^ 0x00 = 0x01
+step2 = 0x01 ^ 0xD0 = 0xD1
+step3 = 0xD1 ^ 0x07 = 0xD6
+step4 = 0xD6 ^ 0x00 = 0xD6
+...   (继续与剩余DATA XOR)
+最终 checksum = 0xD6
+\`\`\`
+
+### 校验失败处理
+
+\`\`\`cpp
+bool verifyPacket(const uint8_t* packet, uint8_t length) {
+    // 提取校验和
+    uint8_t received_checksum = packet[length - 2]; // 倒数第二个字节
+
+    // 计算校验和
+    uint8_t calculated = 0;
+    for (int i = 1; i < length - 2; i++) { // 跳过帧头、帧尾
+        calculated ^= packet[i];
+    }
+
+    // 比较
+    if (calculated != received_checksum) {
+        Serial.printf("Checksum mismatch: expected 0x%02X, got 0x%02X\\n",
+                      calculated, received_checksum);
+        return false;
+    }
+    return true;
+}
+\`\`\`
+
+### 为什么选择 XOR 而非 CRC？
+
+\`\`\`
+XOR校验 vs CRC校验 对比：
+┌─────────────────────────────────────────────────────────────┐
+│ 特性         │ XOR校验         │ CRC校验                  │
+├─────────────────────────────────────────────────────────────┤
+│ 计算复杂度   │ O(1) 按位异或   │ O(n) 多项式除法          │
+│ 错误检测能力 │ 只能检测单位翻转│ 可检测突发错误、多位错误 │
+│ 开销         │ 1字节           │ 1-4字节                  │
+│ 适用场景     │ 低速、短帧      │ 高速、长帧               │
+└─────────────────────────────────────────────────────────────┘
+
+本协议选择XOR的原因：
+1. 帧长仅16字节，错误概率低
+2. USB链路已有物理层校验
+3. 计算开销极低，适合嵌入式
+4. 足够检测常见传输错误
+\`\`\`
+
+### [进阶] 增强校验方案
+
+如需更高可靠性，可使用CRC-16：
+
+\`\`\`cpp
+uint16_t crc16_calc(const uint8_t* data, size_t len) {
+    uint16_t crc = 0xFFFF;
+    for (size_t i = 0; i < len; i++) {
+        crc ^= data[i];
+        for (int j = 0; j < 8; j++) {
+            if (crc & 0x0001) {
+                crc = (crc >> 1) ^ 0xA001;
+            } else {
+                crc >>= 1;
+            }
+        }
+    }
+    return crc;
+}
+\`\`\`
+
+---
 
 ### 2. 舵机控制 (ServoData)
 
@@ -133,17 +540,166 @@ struct ServoData {
 - 需要统一到已知起始状态
 - 避免"突然运动"造成机械损坏
 
+## [进阶] 归位程序详解
+
+### 状态机实现
+
+\`\`\`cpp
+enum HomingState {
+    HOMING_IDLE,        // 空闲
+    HOMING_START,       // 开始归位
+    HOMING_MOVING,      // 移动中
+    HOMING_WAIT,        // 等待到位
+    HOMING_COMPLETE,    // 归位完成
+    HOMING_ERROR        // 错误
+};
+
+class HomingController {
+    HomingState state = HOMING_IDLE;
+    unsigned long start_time;
+    static constexpr uint16_t HOMING_TIMEOUT = 10000; // 10秒超时
+    static constexpr uint16_t HOMING_SPEED = 500;      // 归位速度
+
+public:
+    void start() {
+        state = HOMING_START;
+        start_time = millis();
+        // 发送归位命令到所有舵机
+        for (int i = 0; i < 7; i++) {
+            setServoTarget(i, extend_count, HOMING_SPEED);
+        }
+    }
+
+    void update() {
+        switch (state) {
+            case HOMING_START:
+                state = HOMING_MOVING;
+                break;
+
+            case HOMING_MOVING:
+                // 检查是否所有舵机都到达目标
+                if (allServosAtTarget()) {
+                    state = HOMING_COMPLETE;
+                }
+                // 检查超时
+                else if (millis() - start_time > HOMING_TIMEOUT) {
+                    state = HOMING_ERROR;
+                }
+                break;
+
+            case HOMING_COMPLETE:
+                Serial.println("Homing complete!");
+                break;
+
+            case HOMING_ERROR:
+                Serial.println("Homing error: timeout!");
+                break;
+        }
+    }
+
+    bool allServosAtTarget() {
+        for (int i = 0; i < 7; i++) {
+            if (!isServoAtTarget(i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+\`\`\`
+
+### 归位过程中的位置变化
+
+\`\`\`
+归位位置示意图：
+
+初始状态（未知）          归位过程              最终状态
+     │                          │                      │
+     ▼                          ▼                      ▼
+
+  ╭─────╮                   ╭─────╮               ╭─────╮
+  │握紧 │                   │半握 │               │张开 │
+  │状态 │   ───────▶       │状态 │   ───────▶    │状态 │
+  │     │   归位运动        │     │   等待到位     │     │
+  ╰──┬──╯                   ╰──┬──╯               ╰──┬──╯
+     │                          │                      │
+     ▼                          ▼                      ▼
+
+  grasp_count ─────────────────────────▶  extend_count
+  (最大弯曲)      ◀──────────────────────  (完全伸直)
+
+  注意：归位过程手指只能单向运动（从弯曲到伸直）
+        这是因为归位使用 extend_count 作为目标
+\`\`\`
+
+---
+
 ## 代码位置
 
 主要源文件：
 - \`firmware/main/firmware_v0.1.0.ino\` - 主程序
 - \`firmware/main/Homing.cpp\` - 归位逻辑
 - \`firmware/main/HandConfig.h\` - 配置定义
+
+## 常见问题
+
+### Q1: 归位失败？
+
+**排查步骤：**
+\`\`\`
+1. 检查舵机供电
+   └─→ 5V 3A 电源是否正常
+
+2. 检查肌腱是否打滑
+   └─→ 手动弯曲手指，应该有阻力
+
+3. 检查归位超时设置
+   └─→ 10秒内是否能完成归位
+
+4. 检查 extend_count 配置
+   └─→ 是否设置在安全范围内
+\`\`\`
+
+### Q2: 串口通信不稳定？
+
+**排查步骤：**
+\`\`\`
+1. 检查USB线质量
+   └─→ 使用带屏蔽的USB线
+
+2. 检查波特率设置
+   └─→ 固件和SDK必须一致（921600）
+
+3. 检查校验和
+   └─→ 校验失败会导致丢包
+
+4. 添加延时
+   └─→ 舵机指令间添加1-2ms延时
+\`\`\`
+
+### Q3: 如何调试固件？
+
+**方法：**
+\`\`\`
+1. 串口监视器
+   └─→ Arduino IDE 串口监视器，115200波特
+
+2. 添加调试日志
+   └─→ Serial.printf("Debug: %d\\n", value);
+
+3. LED指示
+   └─→ ESP32板载LED闪烁表示状态
+
+4. 逻辑分析仪
+   └─→ 抓取UART信号，分析时序
+\`\`\`
         `
       },
       {
         id: 'sdk-internals',
         title: 'SDK 内部实现',
+        summary: 'Python SDK 架构详解，AeroHand 核心类、位置映射算法和 GUI 工具的使用方法。',
+        tags: ['SDK', 'Python', '架构'],
         content: `
 ## Python SDK 架构
 
@@ -206,6 +762,356 @@ def _percent_to_count(self, servo_id, percent):
 4. 固件烧录 - 一键更新固件
 5. 实时监控 - 显示位置反馈
 
+---
+
+## [进阶] 错误处理机制
+
+### 异常类型定义
+
+\`\`\`python
+class AeroHandError(Exception):
+    """基础异常类"""
+    pass
+
+class ConnectionError(AeroHandError):
+    """连接相关错误"""
+    pass
+
+class CommunicationError(AeroHandError):
+    """通信错误（校验失败、超时等）"""
+    pass
+
+class ConfigurationError(AeroHandError):
+    """配置错误（端点未设置等）"""
+    pass
+
+class ServoError(AeroHandError):
+    """舵机相关错误（堵转、超时等）"""
+    pass
+\`\`\`
+
+### 重试机制实现
+
+\`\`\`python
+def with_retry(func, max_retries=3, retry_delay=0.1):
+    """
+    带重试的函数装饰器
+
+    适用于通信失败的重试场景
+    """
+    def wrapper(*args, **kwargs):
+        last_exception = None
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except (CommunicationError, SerialException) as e:
+                last_exception = e
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+        raise last_exception
+    return wrapper
+
+class AeroHand:
+    @with_retry(max_retries=3, retry_delay=0.1)
+    def _read_position(self, servo_id):
+        """读取位置（带重试）"""
+        self._send_read_command(servo_id)
+        response = self._read_response()
+        if not self._verify_checksum(response):
+            raise CommunicationError("Checksum mismatch")
+        return self._parse_position(response)
+\`\`\`
+
+### 超时处理
+
+\`\`\`python
+import threading
+import queue
+
+class ReadTimeout(Exception):
+    """读取超时异常"""
+    pass
+
+class AeroHand:
+    def __init__(self, port=None, timeout=1.0):
+        self.timeout = timeout
+        self._response_queue = queue.Queue()
+
+    def _read_with_timeout(self):
+        """
+        带超时的读取操作
+
+        防止串口阻塞导致程序无响应
+        """
+        try:
+            response = self._response_queue.get(
+                timeout=self.timeout
+            )
+            return response
+        except queue.Empty:
+            raise ReadTimeout(
+                f"读取超时 ({self.timeout}秒)"
+            )
+
+    def get_joint_position(self, servo_id):
+        """读取单个关节位置"""
+        self._clear_buffer()
+        self._send_read_command(servo_id)
+
+        try:
+            response = self._read_with_timeout()
+            return self._parse_position(response)
+        except ReadTimeout:
+            # 超时后尝试重试一次
+            self._send_read_command(servo_id)
+            response = self._read_with_timeout()
+            return self._parse_position(response)
+\`\`\`
+
+---
+
+## [进阶] 连接管理与状态机
+
+### 连接状态机
+
+\`\`\`python
+from enum import Enum, auto
+
+class ConnectionState(Enum):
+    DISCONNECTED = auto()    # 未连接
+    CONNECTING = auto()      # 连接中
+    CONNECTED = auto()       # 已连接
+    HOMING = auto()           # 归位中
+    READY = auto()            # 就绪
+    ERROR = auto()            # 错误状态
+
+class AeroHand:
+    def __init__(self, port=None):
+        self._state = ConnectionState.DISCONNECTED
+        self._state_lock = threading.Lock()
+
+    @property
+    def state(self):
+        with self._state_lock:
+            return self._state
+
+    def _set_state(self, new_state):
+        with self._state_lock:
+            old_state = self._state
+            self._state = new_state
+            print(f"状态变更: {old_state.name} → {new_state.name}")
+
+    def connect(self, port=None):
+        """建立连接"""
+        if self.state != ConnectionState.DISCONNECTED:
+            raise ConnectionError("Already connected")
+
+        self._set_state(ConnectionState.CONNECTING)
+        try:
+            self.serial = self._establish_connection(port)
+            self._set_state(ConnectionState.CONNECTED)
+        except Exception as e:
+            self._set_state(ConnectionState.ERROR)
+            raise ConnectionError(f"连接失败: {e}")
+
+    def home(self):
+        """执行归位"""
+        if self.state != ConnectionState.CONNECTED:
+            raise ConnectionError("Not connected")
+
+        self._set_state(ConnectionState.HOMING)
+        self._send_homing_command()
+
+        # 等待归位完成
+        while not self._check_homing_complete():
+            time.sleep(0.1)
+
+        self._set_state(ConnectionState.READY)
+
+    def is_ready(self):
+        """检查是否就绪"""
+        return self.state == ConnectionState.READY
+\`\`\`
+
+### 自动重连机制
+
+\`\`\`python
+class AeroHand:
+    def __init__(self, port=None, auto_reconnect=True):
+        self.auto_reconnect = auto_reconnect
+        self._should_reconnect = True
+
+    def _connection_monitor(self):
+        """
+        后台线程：监控连接状态，自动重连
+        """
+        while self._should_reconnect:
+            if self.state == ConnectionState.CONNECTED:
+                # 检测连接是否断开
+                if not self._is_serial_connected():
+                    self._handle_disconnect()
+
+            time.sleep(0.5)
+
+    def _handle_disconnect(self):
+        """处理断开连接"""
+        if not self.auto_reconnect:
+            self._set_state(ConnectionState.ERROR)
+            return
+
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                print(f"尝试重连 ({attempt+1}/{max_attempts})...")
+                self.serial = self._establish_connection(self.port)
+                self._set_state(ConnectionState.CONNECTED)
+                print("重连成功!")
+                return
+            except Exception as e:
+                print(f"重连失败: {e}")
+                time.sleep(1)
+
+        self._set_state(ConnectionState.ERROR)
+        raise ConnectionError("重连失败")
+
+    def close(self):
+        """关闭连接"""
+        self._should_reconnect = False
+        if self.serial and self.serial.is_open:
+            self.serial.close()
+        self._set_state(ConnectionState.DISCONNECTED)
+\`\`\`
+
+---
+
+## [进阶] 线程安全
+
+### 并发控制问题
+
+\`\`\`
+多线程使用场景：
+
+┌─────────────────────────────────────────────────────────────┐
+│ 线程1: 主循环（控制）     │ 线程2: UI更新（读取状态）        │
+│   └─→ set_joint_position() │   └─→ get_joint_position()      │
+│         ↓                           ↓                       │
+│   ┌────┴────┐                 ┌────┴────┐                 │
+│   │ 写锁    │                 │ 读锁    │                 │
+│   └────┬────┘                 └────┬────┘                 │
+│         ↓                           ↓                       │
+│   ┌────┴────┐                 ┌────┴────┐                 │
+│   │ 串口写入 │                 │ 串口读取 │                 │
+│   └─────────┘                 └─────────┘                 │
+└─────────────────────────────────────────────────────────────┘
+
+问题：
+1. 读写串口同时进行 → 数据干扰
+2. 状态不一致 → 读取到半更新的数据
+3. 命令堆积 → 读取响应错位
+\`\`\`
+
+### 线程安全实现
+
+\`\`\`python
+import threading
+from contextlib import contextmanager
+
+class ThreadSafeAeroHand:
+    """线程安全的AeroHand封装"""
+
+    def __init__(self, port=None):
+        self._hand = AeroHand(port)
+        self._lock = threading.RLock()  # 可重入锁
+        self._read_event = threading.Event()
+        self._last_response = None
+
+    @contextmanager
+    def _serial_lock(self, timeout=5.0):
+        """
+        串口访问锁
+
+        使用with语句确保锁释放
+        """
+        acquired = self._lock.acquire(timeout=timeout)
+        if not acquired:
+            raise TimeoutError("获取锁超时")
+        try:
+            yield
+        finally:
+            self._lock.release()
+
+    def set_joint_positions(self, positions):
+        """设置关节位置（线程安全）"""
+        with self._serial_lock():
+            self._hand.set_joint_positions(positions)
+
+    def get_joint_positions(self):
+        """读取关节位置（线程安全）"""
+        with self._serial_lock():
+            return self._hand.get_joint_positions()
+
+    def execute_command(self, cmd_func):
+        """
+        执行需要原子操作的命令
+
+        参数:
+            cmd_func: 需要原子执行的函数
+        """
+        with self._serial_lock():
+            return cmd_func(self._hand)
+\`\`\`
+
+### 批量命令的原子性
+
+\`\`\`python
+class AeroHand:
+    def set_all_joints_atomic(self, positions):
+        """
+        原子设置所有关节
+
+        确保所有位置在同一时刻生效
+        """
+        with self._serial_lock():
+            # 1. 构建完整帧
+            frame = self._build_position_frame(positions)
+
+            # 2. 发送
+            self.serial.write(frame)
+
+            # 3. 等待响应（可选）
+            if self.wait_for_ack():
+                return True
+            return False
+
+    def set_joint_positions_safely(self, positions):
+        """
+        安全设置关节（带验证）
+
+        设置后验证位置是否生效
+        """
+        # 先设置
+        self.set_joint_positions(positions)
+
+        # 短暂等待
+        time.sleep(0.05)
+
+        # 验证
+        current = self.get_joint_positions()
+
+        # 检查偏差
+        max_deviation = 5  # 允许5%的偏差
+        for cmd, actual in zip(positions, current):
+            if abs(cmd - actual) > max_deviation:
+                raise ServoError(
+                    f"位置验证失败: 命令={cmd}, 实际={actual}"
+                )
+
+        return True
+\`\`\`
+
+---
+
 ## 示例脚本解析
 
 ### run_sequence.py
@@ -237,6 +1143,64 @@ hand.set_joint_positions([0]*7)
 - 舵机运动需要时间（约 500ms-1s）
 - 不等待会导致命令堆积
 - 可能造成运动不平滑
+
+## 常见问题
+
+### Q1: 通信超时？
+
+**排查步骤：**
+\`\`\`
+1. 检查USB连接
+   └─→ 更换USB线或端口
+
+2. 检查固件是否运行
+   └─→ 发送归位命令测试
+
+3. 降低波特率
+   └─→ 从921600降到460800
+
+4. 增加超时时间
+   └─→ timeout参数设为2.0或更大
+\`\`\`
+
+### Q2: 数据校验失败？
+
+**原因：**
+\`\`\`
+1. 串口信号干扰
+   └─→ 添加延时或使用屏蔽线
+
+2. 波特率不匹配
+   └→ 固件和SDK使用相同波特率
+
+3. 供电不足
+   └→ 舵机供电不足导致响应异常
+
+4. 多线程并发
+   └→ 使用线程安全封装类
+\`\`\`
+
+### Q3: 如何实现平滑运动？
+
+**推荐方法：**
+\`\`\`python
+import numpy as np
+
+def smooth_trajectory(start, end, steps=20):
+    """生成平滑轨迹（余弦插值）"""
+    t = np.linspace(0, np.pi, steps)
+    trajectory = start + (end - start) * (1 - np.cos(t)) / 2
+    return trajectory
+
+# 使用
+hand = AeroHand()
+start = [0, 0, 0, 0, 0, 0]
+end = [100, 100, 100, 100, 100, 100]
+
+for positions in smooth_trajectory(start, end, steps=30):
+    hand.set_joint_positions(positions)
+    time.sleep(0.03)  # ~33Hz
+\`\`\`
         `
       }
     ]
@@ -250,6 +1214,8 @@ hand.set_joint_positions([0]*7)
       {
         id: 'pwm-basics',
         title: 'PWM 控制基础',
+        summary: 'PWM 信号原理、HLS3606M 串行总线协议、4096 级分辨率的详解。',
+        tags: ['舵机', 'PWM', '原理'],
         content: `
 ## 什么是 PWM？
 
@@ -313,11 +1279,297 @@ ESP32 ─── TX ──┬── 舵机0
 - 手指抓取需要精细控制
 - 不同的物体需要不同的弯曲程度
 - 更平滑的运动轨迹
+
+---
+
+## [进阶] PID 控制原理
+
+### 什么是 PID？
+
+PID（比例-积分-微分）控制器是舵机内部的核心控制算法：
+
+\`\`\`
+PID 控制器框图：
+
+        ┌─────────────────────────────────────────┐
+        │                                         │
+        │    ┌──────┐     ┌──────┐     ┌──────┐  │
+target ──→(+)─→│  P   │─→(+)?─→│  I   │─→(+)?─→│  D   │─→ output
+        │    └──────┘     └──────┘     └──────┘  │
+        │      ↑            ↑            ↑        │
+        │      │            │            │        │
+        │      └────────────┴────────────┘        │
+        │                  │                    │
+        └──────────────────│────────────────────┘
+                           │
+                       feedback
+\`\`\`
+
+**三个控制分量：**
+
+\`\`\`
+1. P（比例）- 现在
+   作用：根据当前误差大小控制
+   公式：u_p = Kp * e(t)
+
+2. I（积分）- 过去
+   作用：消除稳态误差
+   公式：u_i = Ki * ∫e(t)dt
+
+3. D（微分）- 未来
+   作用：预测趋势，抑制震荡
+   公式：u_d = Kd * de(t)/dt
+
+总输出：u(t) = Kp*e(t) + Ki*∫e(t)dt + Kd*de(t)/dt
+\`\`\`
+
+### PID 参数对响应的影响
+
+\`\`\`
+参数过大（响应太快/震荡）：
+┌──────────────────────────────────────────────┐
+│ 响应曲线：                                    │
+│                                              │
+│ 目标 ───────┐                                 │
+│            ╱ ╲  ← 过冲（Overshoot）           │
+│           ╱   ╲                               │
+│          ╱     ╲                              │
+│         ╱       ╲← 震荡                       │
+│        ╱         ╲                            │
+│ ───────┴──────────╲─────────────────────────→ │
+│                    ╲                          │
+│                                              │
+│ 现象：手指抖动、抖动、机械振动                  │
+│ 解决：减小 Kp, Kd                             │
+└──────────────────────────────────────────────┘
+
+参数过小（响应太慢）：
+┌──────────────────────────────────────────────┐
+│ 响应曲线：                                    │
+│                                              │
+│ 目标 ────────────────────────────┐            │
+│                                 ╱             │
+│                                ╱              │
+│                               ╱               │
+│                              ╱                │
+│ ──────────────────────────────╱─────────────→ │
+│                                → 上升时间太长  │
+│                                              │
+│ 现象：手指移动迟缓、响应不及时                  │
+│ 解决：增大 Kp, Ki                             │
+└──────────────────────────────────────────────┘
+
+合适参数（快速平稳）：
+┌──────────────────────────────────────────────┐
+│ 响应曲线：                                    │
+│                                              │
+│ 目标 ────────────────────────────┐            │
+│                                 │             │
+│                                │              │
+│                               │               │
+│                              │                │
+│ ──────────────────────────────┴─────────────→ │
+│                                              │
+│ 现象：无过冲、无震荡、快速到达目标              │
+│ 特征：上升时间快、 settling time 短             │
+└──────────────────────────────────────────────┘
+\`\`\`
+
+---
+
+## [进阶] 位置环/速度环/力矩环
+
+### 三环控制架构
+
+HLS3606M 内部采用**三环PID级联控制**：
+
+\`\`\`
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│   位置环（最外层）                                            │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │ 输入：目标位置（count）                                │   │
+│   │ 输出：目标速度                                        │   │
+│   │                                                      │   │
+│   │   e_position = target_pos - current_pos               │   │
+│   │   target_vel = Kp_pos * e_position                    │   │
+│   └─────────────────────────────────────────────────────┘   │
+│                            ↓                                │
+│   速度环（中间层）                                            │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │ 输入：目标速度                                        │   │
+│   │ 输出：目标力矩                                        │   │
+│   │                                                      │   │
+│   │   e_velocity = target_vel - current_vel               │   │
+│   │   target_torque = Kp_vel * e_velocity                 │   │
+│   │                 + Ki_vel * ∫e_velocity               │   │
+│   └─────────────────────────────────────────────────────┘   │
+│                            ↓                                │
+│   力矩环（最内层）                                            │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │ 输入：目标力矩                                        │   │
+│   │ 输出：PWM占空比                                       │   │
+│   │                                                      │   │
+│   │   e_torque = target_torque - current_torque          │   │
+│   │   pwm = Kp_torque * e_torque                        │   │
+│   └─────────────────────────────────────────────────────┘   │
+│                            ↓                                │
+│                         电机                                │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+\`\`\`
+
+### 各环作用详解
+
+\`\`\`
+1. 位置环（Position Loop）
+   - 任务：到达目标位置
+   - 关注：最终位置是否正确
+   - 参数：Kp_pos（比例）
+   - 调整：位置超调时减小，正常时增大
+
+2. 速度环（Velocity Loop）
+   - 任务：平滑速度变化
+   - 关注：避免速度突变
+   - 参数：Kp_vel, Ki_vel
+   - 调整：速度震荡时增加阻尼
+
+3. 力矩环（Torque/Current Loop）
+   - 任务：输出所需力矩
+   - 关注：响应速度、效率
+   - 参数：Kp_torque
+   - 调整：电机抖动时减小
+
+为什么用三环？
+- 每环只关注一个目标，参数调节简单
+- 内环响应快，外环响应慢
+- 避免"既要位置准又要速度快"的矛盾
+\`\`\`
+
+### 调试技巧
+
+\`\`\`
+从内到外调试：
+
+1. 力矩环（最内层）
+   - 轻载测试，确认电机运转平稳
+   - 如果抖动：减小 Kp_torque
+
+2. 速度环
+   - 给定恒定速度，检查是否恒定
+   - 如果速度不稳：增加 Ki_vel（积分）
+
+3. 位置环（最外层）
+   - 给定目标位置，检查到位情况
+   - 如果超调：减小 Kp_pos
+   - 如果响应慢：增大 Kp_pos
+
+注意：HLS3606M 是内置闭环，用户无法直接修改 PID 参数
+      只能通过 Feetech 软件调整
+\`\`\`
+
+---
+
+## [进阶] 堵转检测与保护
+
+### 堵转原因
+
+\`\`\`
+堵转（Stall）发生在：舵机无法移动但电机继续输出力矩
+
+┌────────────────────────────────────────────────────────────┐
+│                                                            │
+│   正常情况：                                  │
+│   手指运动 ──────────────────────────→ 位置变化         │
+│   电机力矩 = 所需力矩（很小）                      │
+│                                                            │
+│   堵转情况：                                              │
+│   手指卡住 ──────→ 位置不变 ──────→ 力矩持续增加        │
+│   电机力矩 = 最大输出（可能烧毁）                       │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+
+常见原因：
+1. 机械卡死（零件干涉、螺丝松动）
+2. 肌腱断裂
+3. 负载过大（抓取太重物体）
+4. 关节过载（超出运动范围）
+\`\`\`
+
+### 堵转检测方法
+
+\`\`\`
+HLS3606M 检测堵转的两种方式：
+
+1. 位置误差检测
+   - 比较目标位置和实际位置
+   - 误差持续 > 阈值 → 堵转
+
+   代码逻辑：
+   if (abs(target_pos - current_pos) > THRESHOLD &&
+       duration > TIME_LIMIT) {
+       // 堵转！
+   }
+
+2. 负载检测
+   - 监测电机电流
+   - 电流持续 > 阈值 → 堵转
+
+   代码逻辑：
+   if (motor_current > CURRENT_THRESHOLD &&
+       duration > TIME_LIMIT) {
+       // 堵转！
+   }
+\`\`\`
+
+### 堵转保护措施
+
+\`\`\`
+1. 固件层保护（ESP32）
+   - 检测到堵转后停止发送位置命令
+   - 记录错误状态
+   - 发送错误通知
+
+2. 舵机层保护（HLS3606M）
+   - 内置堵转检测
+   - 自动降低输出（软保护）
+   - 可能进入保护模式
+
+3. 应用层保护（SDK）
+   - 检测持续大电流
+   - 定期检查位置误差
+   - 超时强制停止
+
+示例代码（SDK）：
+\`\`\`python
+def safe_move(hand, positions, max_attempts=3):
+    """带堵转检测的安全移动"""
+    for attempt in range(max_attempts):
+        hand.set_joint_positions(positions)
+        time.sleep(0.5)
+
+        # 检查是否到达目标
+        current = hand.get_joint_positions()
+        error = sum(abs(c - t) for c, t in zip(current, positions))
+
+        if error < 5:  # 5% 容差
+            return True
+
+        # 检测大误差
+        if error > 30:
+            print(f"警告：位置误差 {error}%")
+            if attempt == max_attempts - 1:
+                raise ServoError("堵转检测：无法到达目标位置")
+
+    return False
+\`\`\`
         `
       },
       {
         id: 'endpoint-configuration',
         title: '端点配置详解',
+        summary: '掌握 extend_count 和 grasp_count 的配置方法，通过 GUI 工具校准舵机安全运动范围。',
+        tags: ['舵机', '配置', '教程'],
         content: `
 ## 什么是端点配置？
 
@@ -463,6 +1715,8 @@ hand.save_endpoint_config()
       {
         id: 'xml-structure',
         title: 'MuJoCo XML 模型解析',
+        summary: 'MuJoCo 模型文件结构详解：Body、Tendon、Actuator、Site 的配置和使用技巧。',
+        tags: ['仿真', 'MuJoCo', 'XML'],
         content: `
 ## MuJoCo 模型文件结构
 
@@ -601,6 +1855,8 @@ sim_rl/simulation/assets/
       {
         id: 'realtime-control',
         title: '实时控制仿真',
+        summary: '使用 mujoco.viewer 实现交互式仿真控制，键盘控制脚本和策略加载方法。',
+        tags: ['仿真', 'MuJoCo', '代码'],
         content: `
 ## 问题：训练脚本只生成视频？
 
@@ -751,6 +2007,8 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
       {
         id: 'mjx-acceleration',
         title: 'MJX 加速训练',
+        summary: 'JAX 加速的 MuJoCo 训练框架，mujoco_playground 使用指南和 PPO 训练配置。',
+        tags: ['仿真', 'RL', 'MJX'],
         content: `
 ## 什么是 MJX？
 
@@ -810,7 +2068,7 @@ sim_rl/mujoco_playground/
 │           └── layers.py           # 网络层
 ├── learning/
 │   └── train_jax_ppo.py           # 训练脚本
-\�── ...
+└── ...
 \`\`\`
 
 ### 训练流程
@@ -845,6 +2103,183 @@ python learning/train_jax_ppo.py \\
 --GAE_lambda=0.95         # GAE参数
 --update_every=50         # 更新频率
 \`\`\`
+
+---
+
+## [进阶] MJX 与标准 MuJoCo 对比
+
+### 功能对比
+
+\`\`\`
+┌─────────────────────────────────────────────────────────────────┐
+│ 特性             │ 标准 MuJoCo      │ MJX (MuJoCo-JAX)        │
+├─────────────────────────────────────────────────────────────────┤
+│ 计算后端         │ C++ (CPU)        │ JAX (GPU/TPU)            │
+│ 并行化           │ 手动多线程       │ 自动向量化                │
+│ 训练速度         │ ~1K steps/s     │ ~100K steps/s            │
+│ 调试方式         │ 实时可视化       │ 离线分析                 │
+│ 物理准确性       │ ✓ 完全一致       │ ✓ 基本一致               │
+│ 自定义物理       │ 需要修改C++      │ JAX函数可自定义          │
+│ 部署方式         │ 直接运行         │ 需转换为推理模式          │
+└─────────────────────────────────────────────────────────────────┘
+\`\`\`
+
+### 使用场景选择
+
+\`\`\`
+选择标准 MuJoCo：
+- 交互式调试和可视化
+- 验证物理模型正确性
+- 少量步骤的精确仿真
+- 实时控制（hardware-in-the-loop）
+
+选择 MJX：
+- 大规模强化学习训练
+- 需要 GPU 加速
+- 批量数据生成
+- 研究和实验迭代
+\`\`\`
+
+### 代码切换示例
+
+\`\`\`python
+# 标准 MuJoCo（交互式）
+import mujoco
+
+model = mujoco.MjSpec.from_file("aero_hand.xml").to_model()
+data = mujoco.MjData(model)
+
+with mujoco.viewer.launch_passive(model, data) as viewer:
+    while viewer.is_running():
+        mujoco.mj_step(model, data)
+        viewer.sync()
+
+# MJX（批量训练）
+import mujoco_or弻ect as mjx
+
+# 注意：使用 mjx 而不是 mujoco
+model = mjx.make_model("aero_hand.xml")
+state = mjx.make_data(model)
+
+# 批量模拟
+states = mjx.sample_data(model, num_samples=1024)
+
+# JIT 编译的步进函数
+step_fn = jax.jit(mjx.step)
+states = step_fn(states, actions)
+\`\`\`
+
+---
+
+## [进阶] GPU 配置指南
+
+### 检查 GPU 可用性
+
+\`\`\`python
+import jax
+
+# 检查 JAX 可见的设备
+print(jax.devices())
+
+# 输出示例：
+# [CpuDevice(id=0), GpuDevice(id=0), ...]
+
+# 检查是否使用 GPU
+if 'gpu' in str(jax.devices()):
+    print("✓ GPU 可用")
+else:
+    print("⚠ 仅使用 CPU")
+\`\`\`
+
+### 环境变量配置
+
+\`\`\`bash
+# 设置 GPU 内存增长（避免 OOM）
+export JAX_PLATFORMS=cuda        # 优先使用 GPU
+export CUDA_VISIBLE_DEVICES=0     # 使用第一块 GPU
+export XLA_PYTHON_CLIENT_MEM_FRACTION=0.75  # 使用 75% GPU 内存
+
+# 多 GPU 配置
+export CUDA_VISIBLE_DEVICES=0,1   # 使用前两块 GPU
+\`\`\`
+
+### 常见 GPU 问题
+
+**问题1: GPU 内存不足 (OOM)**
+
+\`\`\`
+症状：
+jax.errors.OutOfMemoryError: RESOURCE_EXHAUSTED
+
+解决：
+1. 减少并行环境数
+   --num_envs=512  # 从1024减到512
+
+2. 减少 batch_size
+   --batch_size=1024  # 从2048减到1024
+
+3. 启用梯度检查点
+   --checkpointing=True
+
+4. 使用更小的模型
+\`\`\`
+
+**问题2: GPU 未被使用**
+
+\`\`\`
+诊断：
+python -c "import jax; print(jax.devices())"
+
+如果只有 CPU：
+1. 检查 NVIDIA 驱动
+   nvidia-smi
+
+2. 检查 CUDA 安装
+   nvcc --version
+
+3. 检查 JAX GPU 版本
+   pip install jax[cuda12] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+\`\`\`
+
+**问题3: 多 GPU 负载不均衡**
+
+\`\`\`
+# 正确：JAX 自动处理多 GPU
+# 错误：手动指定设备
+
+# 这样是错误的：
+with jax.default_device(jax.devices()[1]):
+    ...
+
+# 正确：让 JAX 自动分配
+parallel_step = jax.pmap(step_fn)  # 自动在所有 GPU 上并行
+\`\`\`
+
+### 性能调优
+
+\`\`\`python
+# 1. 预热 JIT 编译
+# 第一次运行会很慢（编译时间），之后会变快
+_ = step_fn(states, actions)  # 触发编译
+
+# 2. 使用静态参数
+# 动态值会阻止 JIT 优化
+@jax.jit
+def step_fn(state, action):
+    # 避免在函数内部创建大数组
+    ...
+
+# 3. 混合精度训练
+# 减少内存使用，提高速度
+from jax import numpy as jnp
+from flax.training import train_state
+from flax.training.train_state import TrainState
+
+# 使用 float32 但在关键计算用 float32
+model = nn.with_precision(jnp.float32)
+\`\`\`
+
+---
 
 ## 调试技巧
 
@@ -911,6 +2346,8 @@ np.save('policy_params.npy', params)
       {
         id: 'why-ros2',
         title: '为什么需要 ROS2？',
+        summary: 'ROS2 与 SDK 的对比分析，Topic、Message、Node 等核心概念详解。',
+        tags: ['ROS2', '架构', '概念'],
         content: `
 ## ROS2 的作用
 
@@ -1053,6 +2490,8 @@ class HandControlNode(Node):
       {
         id: 'ros2-setup',
         title: 'ROS2 环境搭建',
+        summary: 'Ubuntu 22.04 安装 ROS2 Humble、Aero Hand ROS2 包编译和运行示例节点。',
+        tags: ['ROS2', '安装', '教程'],
         content: `
 ## 安装 ROS2 Humble
 
@@ -1146,6 +2585,8 @@ ros2 run rqt_graph rqt_graph
       {
         id: 'ppo-algorithm',
         title: 'PPO 算法原理',
+        summary: 'Proximal Policy Optimization 算法核心原理，Actor-Critic 架构和裁剪机制。',
+        tags: ['RL', 'PPO', '原理'],
         content: `
 ## 什么是 PPO？
 
@@ -1308,11 +2749,288 @@ Episode Reward
 → 增大批大小
 → 检查环境bug
 \`\`\`
+
+---
+
+## [进阶] 奖励函数设计技巧
+
+### 奖励函数基本原则
+
+\`\`\`
+奖励函数 = 任务奖励 + 辅助奖励
+
+1. 任务奖励（必须）
+   - 定义任务目标（如：抓取成功 +10）
+   - 稀疏但明确
+
+2. 辅助奖励（可选）
+   - 引导学习（如：靠近物体 +0.1）
+   - 密集但辅助
+\`\`\`
+
+### 常见奖励模式
+
+\`\`\`
+模式1：稀疏奖励（Sparse）
+   只在完成目标时给奖励
+   +10 (成功) / 0 (其他)
+   优点：明确目标
+   缺点：学习慢
+
+模式2：密集奖励（Dense）
+   每步都给奖励
+   基于与目标的距离
+   优点：学习快
+   缺点：可能学偏
+
+模式3：混合奖励（推荐）
+   任务奖励 + 塑形奖励
+   = 稀疏 × 0.8 + 密集 × 0.2
+   综合两者优点
+\`\`\`
+
+### Aero Hand 抓取任务奖励设计
+
+\`\`\`python
+def compute_reward(self, obs, action, next_obs, info):
+    """
+    抓取任务奖励函数设计
+
+    组成部分：
+    1. 任务成功奖励（稀疏）
+    2. 接触奖励（塑形）
+    3. 动作惩罚（平滑）
+    """
+    reward = 0.0
+
+    # 1. 任务成功奖励
+    if info['is_success']:
+        reward += 10.0  # 抓取成功
+
+    # 2. 接触奖励（鼓励接触物体）
+    contact_reward = self._compute_contact_reward(next_obs)
+    reward += 0.5 * contact_reward
+
+    # 3. 速度奖励（鼓励快速抓取）
+    velocity_reward = self._compute_velocity_reward(next_obs)
+    reward += 0.2 * velocity_reward
+
+    # 4. 动作惩罚（避免过大动作）
+    action_penalty = -0.01 * np.sum(np.square(action))
+    reward += action_penalty
+
+    # 5. 边界惩罚（避免手指过度弯曲）
+    boundary_penalty = self._compute_boundary_penalty(next_obs)
+    reward += 0.1 * boundary_penalty
+
+    return reward
+
+def _compute_contact_reward(self, obs):
+    """
+    接触奖励：手指与物体接触时给奖励
+    """
+    finger_positions = obs[:7]
+    object_position = obs[7:10]
+
+    # 计算手指到物体的距离
+    min_distance = min_distance_finger_to_object(
+        finger_positions, object_position
+    )
+
+    # 接触奖励（距离越小奖励越大）
+    if min_distance < 0.01:  # 接触阈值
+        return 1.0
+    else:
+        return max(0, 1.0 - min_distance / 0.1)
+
+def _compute_velocity_reward(self, obs):
+    """
+    速度奖励：鼓励快速移动手指
+    """
+    velocities = obs[14:21]  # 假设速度在 obs 中的位置
+    return np.mean(np.abs(velocities))
+\`\`\`
+
+### 奖励塑形技巧
+
+\`\`\`
+技巧1：势能函数塑形
+使用势能函数引导学习：
+reward += potential(next_state) - potential(state)
+
+例如：
+potential = -distance_to_target
+
+技巧2：混合多目标
+reward = task_reward + α * shaping_reward
+
+其中 α 随训练递减：
+α = α0 * (1 - progress)
+
+技巧3：分解奖励分量
+分清楚什么是"必须学到的"和"最好学到的"
+只用稀疏的任务奖励定义成功
+\`\`\`
+
+### 调试奖励函数
+
+\`\`\`
+问题：策略学到钻空子
+症状：找到漏洞获得高奖励但不是真正完成任务
+
+解决：
+1. 仔细检查奖励条件
+2. 添加额外约束（如必须保持物体在手中）
+3. 使用更复杂的状态评估
+
+问题：策略完全不学习
+症状：奖励一直是初始值
+
+解决：
+1. 检查奖励计算是否有 bug
+2. 检查奖励是否过小（需要放缩）
+3. 添加更多塑形奖励
+
+问题：策略行为不稳定
+症状：动作幅度忽大忽小
+
+解决：
+1. 增加动作惩罚系数
+2. 添加平滑奖励（惩罚动作变化）
+3. 减小学习率
+\`\`\`
+
+---
+
+## [进阶] 多任务学习
+
+### 什么是多任务学习？
+
+\`\`\`
+单任务 vs 多任务：
+
+单任务：
+  任务A → 策略A
+  任务B → 策略B  (需要重新训练)
+  ...
+
+多任务：
+  任务A、B、C → 共享策略 → 统一表示
+
+优点：
+  ✓ 知识迁移
+  ✓ 样本效率高
+  ✓ 策略更鲁棒
+\`\`\`
+
+### 多任务架构设计
+
+\`\`\`
+架构1：共享特征提取器
+┌─────────────────────────────────────────┐
+│         共享特征层 (MLP)                 │
+│         ↓           ↓                   │
+│    ┌────────┐  ┌────────┐             │
+│    │ 头A    │  │ 头B    │  ...         │
+│    └────────┘  └────────┘             │
+│         ↑           ↑                   │
+│       任务A       任务B                 │
+└─────────────────────────────────────────┘
+
+架构2：注意机制
+┌─────────────────────────────────────────┐
+│         共享特征层                       │
+│              ↓                          │
+│         Attention                       │
+│              ↓                          │
+│    ┌─────────────────────────┐         │
+│    │    任务特定输出          │         │
+│    └─────────────────────────┘         │
+└─────────────────────────────────────────┘
+\`\`\`
+
+### Aero Hand 多任务示例
+
+\`\`\`python
+class MultiTaskAeroHandEnv(gym.Env):
+    """
+    多任务环境：支持多个不同任务
+    """
+
+    TASKS = {
+        'grasp': {
+            'obs': ['joint_pos', 'object_pos'],
+            'reward_fn': compute_grasp_reward,
+            'success_fn': is_object_grasped,
+        },
+        'push': {
+            'obs': ['joint_pos', 'object_pos', 'target_pos'],
+            'reward_fn': compute_push_reward,
+            'success_fn': is_object_at_target,
+        },
+        'rotate': {
+            'obs': ['joint_pos', 'object_pos', 'object_quat'],
+            'reward_fn': compute_rotate_reward,
+            'success_fn': is_object_rotated,
+        },
+    }
+
+    def __init__(self, task='grasp'):
+        self.task = task
+        self.task_config = self.TASKS[task]
+
+    def reset(self):
+        # 任务特定初始化
+        obs = self._reset_task_specific()
+        return obs
+
+    def step(self, action):
+        obs, reward, done, info = self._step_task_specific(action)
+        return obs, reward, done, info
+
+    def _compute_grasp_reward(self, obs, action, info):
+        """抓取任务奖励"""
+        # ... 实现
+        return reward
+
+    def _compute_push_reward(self, obs, action, info):
+        """推动任务奖励"""
+        # ... 实现
+        return reward
+\`\`\`
+
+### 任务平衡策略
+
+\`\`\`
+问题：某些任务学得好，某些任务学得差
+
+原因：
+- 不同任务的难度不同
+- 奖励规模不同
+- 样本数量不均衡
+
+解决方案：
+
+1. 任务加权采样
+   优先采样困难任务
+   weights = 1.0 / success_rate
+
+2. 奖励归一化
+   每个任务的奖励除以各自的标准差
+
+3. 课程学习
+   从简单任务开始，逐步引入复杂任务
+
+4. HGR 损失
+   添加辅助损失鼓励任务解耦
+\`\`\`
         `
       },
       {
         id: 'domain-randomization',
         title: '域随机化',
+        summary: 'Sim2Real 挑战的解决方案，域随机化策略和 Aero Hand 的渐进式训练方法。',
+        tags: ['RL', 'Sim2Real', '训练'],
         content: `
 ## Sim2Real 挑战
 
@@ -1454,6 +3172,8 @@ checkpoint_10M  # 高度随机化
       {
         id: 'deployment',
         title: '策略部署',
+        summary: '训练策略导出、SDK 和 ROS2 部署方法、现实世界调整技巧和安全检查。',
+        tags: ['RL', '部署', 'Sim2Real'],
         content: `
 ## 部署流程总览
 
@@ -1709,6 +3429,8 @@ def safe_execute(hand, action):
       {
         id: 'sdk-basics',
         title: 'SDK 基础操作',
+        summary: 'Python SDK 安装、连接初始化、归位、单关节和多关节控制、平滑运动轨迹。',
+        tags: ['SDK', '代码', '教程'],
         content: `
 ## 安装 SDK
 
@@ -1893,6 +3615,8 @@ hand.set_joint_positions([0]*6)
       {
         id: 'mujoco-scripts',
         title: 'MuJoCo 控制脚本',
+        summary: '基础仿真脚本、键盘交互控制、轨迹跟踪、关节角度和肌腱张力可视化。',
+        tags: ['仿真', '代码', 'MuJoCo'],
         content: `
 ## 基础仿真脚本
 

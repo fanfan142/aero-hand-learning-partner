@@ -73,6 +73,8 @@ Aero Hand Open 是一个开源的肌腱驱动灵巧机械手项目，包含：
 3. 提供操作指导
 4. 帮助排查问题
 5. 提供代码示例
+6. **代码解释专家**：能够深入分析代码逻辑、解释函数作用、分析调用关系
+7. **故障排查专家**：能够根据错误信息分析问题原因，提供排查步骤和解决方案
 
 ## 回答风格
 - 专业但不晦涩
@@ -80,12 +82,26 @@ Aero Hand Open 是一个开源的肌腱驱动灵巧机械手项目，包含：
 - 提供具体示例
 - 解释原理和原因
 - 用中文回答
+- 使用Markdown格式化回答（代码块、列表、表格等）
+- 代码示例要完整可运行
 
 ## 特殊指令
-- 如果用户询问代码，提供可运行的完整示例
-- 如果用户遇到问题，提供排查步骤
+- 如果用户询问代码，提供可运行的完整示例，并解释关键部分
+- 如果用户遇到问题，提供排查步骤：可能原因 → 排查方法 → 解决方案
+- 如果用户要求解释代码，按以下结构回答：整体功能 → 核心逻辑 → 关键函数 → 调用关系
 - 如果不确定，坦诚说明并提供查找方向
 - 优先使用项目中的实际代码作为示例
+- 涉及硬件/舵机问题时，考虑可能的物理连接问题
+- 涉及仿真问题时，考虑环境配置和参数设置
+
+## 知识库能力
+你可以回答以下主题：
+- **硬件**：ESP32-S3、HLS3606M舵机、肌腱驱动原理、3D打印
+- **固件**：Arduino、串口协议（0x01-0x32操作码）、舵机控制
+- **SDK**：Python API、GUI工具、动作序列
+- **仿真**：MuJoCo XML模型、MJX、JAX、强化学习
+- **ROS2**：话题通信、节点订阅、服务调用
+- **Sim2Real**：域随机化、策略部署、调试优化
 
 ${
   progress !== undefined
@@ -114,7 +130,7 @@ ${
 }
 
 // OpenAI兼容API调用函数
-export async function callOpenAICompatibleAPI(config, question, systemPrompt) {
+export async function callOpenAICompatibleAPI(config, question, systemPrompt, messagesHistory = null) {
   const { apiKey, baseUrl, model } = config
 
   if (!apiKey) {
@@ -125,6 +141,25 @@ export async function callOpenAICompatibleAPI(config, question, systemPrompt) {
     throw new Error('请先配置API地址')
   }
 
+  // 构建消息列表：支持直接传入消息历史或单个问题
+  let messages
+  if (messagesHistory) {
+    // 使用传入的完整消息历史
+    messages = messagesHistory
+  } else {
+    // 兼容旧用法：单个问题 + 系统提示
+    messages = [
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      {
+        role: 'user',
+        content: question
+      }
+    ]
+  }
+
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -133,18 +168,9 @@ export async function callOpenAICompatibleAPI(config, question, systemPrompt) {
     },
     body: JSON.stringify({
       model: model || 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt
-        },
-        {
-          role: 'user',
-          content: question
-        }
-      ],
+      messages,
       temperature: 0.7,
-      max_tokens: 2048
+      max_tokens: 4096
     })
   })
 

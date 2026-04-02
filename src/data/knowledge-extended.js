@@ -1614,5 +1614,882 @@ graph TB
     I -->|是| B
       `
     }
+  },
+
+  // ========== 实战案例 ==========
+  practicalCases: {
+    graspTask: {
+      title: '抓取任务完整实现',
+      content: `
+## 实战案例：如何实现一个抓取任务
+
+本案例展示从环境定义到 Sim2Real 部署的完整流程。
+
+### 1. 环境定义
+
+\`\`\`python
+# grasp_env.py
+import gymnasium as gym
+import numpy as np
+import mujoco
+
+class AeroGraspEnv(gym.Env):
+    """Aero Hand 抓取环境"""
+
+    def __init__(self, xml_path="aero_hand_with_obj.xml"):
+        super().__init__()
+
+        # 加载模型
+        self.model = mujoco.MjSpec.from_file(xml_path).to_model()
+        self.data = mujoco.MjData(self.model)
+
+        # 动作空间：7个连续动作 [-1, 1]
+        self.action_space = gym.spaces.Box(
+            low=-1, high=1, shape=(7,), dtype=np.float32
+        )
+
+        # 观测空间
+        obs_dim = 7 + 3 + 3  # 关节位置 + 物体位置 + 目标位置
+        self.observation_space = gym.spaces.Box(
+            low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
+        )
+
+    def reset(self, seed=None):
+        super().reset(seed=seed)
+
+        # 随机化物体初始位置
+        self._randomize_object_position()
+
+        # 重置仿真
+        mujoco.mj_reset(self.model, self.data)
+
+        return self._get_obs(), {}
+
+    def step(self, action):
+        # 应用动作（归一化 → 实际位置）
+        self._apply_action(action)
+
+        # 步进物理
+        mujoco.mj_step(self.model, self.data)
+
+        # 计算奖励
+        reward = self._compute_reward()
+
+        # 检查完成
+        done = self._is_done()
+        info = self._get_info()
+
+        return self._get_obs(), reward, done, False, info
+
+    def _apply_action(self, action):
+        """将 [-1, 1] 动作映射到 [0, 1] 控制"""
+        ctrl = (action + 1) / 2  # 归一化到 [0, 1]
+        self.data.ctrl[:] = ctrl
+
+    def _compute_reward(self):
+        """抓取奖励函数"""
+        reward = 0.0
+
+        # 1. 接触奖励
+        contact = self._check_contact()
+        reward += contact * 0.5
+
+        # 2. 物体靠近手掌
+        object_pos = self.data.body("object").xpos
+        palm_pos = self.data.body("palm").xpos
+        distance = np.linalg.norm(object_pos - palm_pos)
+        reward += max(0, 1.0 - distance)
+
+        # 3. 成功抓取
+        if self._check_grasp_success():
+            reward += 10.0
+
+        # 4. 动作惩罚
+        reward -= 0.01 * np.sum(np.square(self.data.ctrl[:7]))
+
+        return reward
+
+    def _check_grasp_success(self):
+        """检查是否成功抓取（物体在手掌内）"""
+        object_pos = self.data.body("object").xpos
+        palm_pos = self.data.body("palm").xpos
+
+        # 物体距离手掌足够近且手指闭合
+        distance = np.linalg.norm(object_pos - palm_pos)
+        finger_closed = np.mean(self.data.ctrl[:4]) > 0.8
+
+        return distance < 0.05 and finger_closed
+\`\`\`
+
+### 2. 训练配置
+
+\`\`\`python
+# train_grasp.py
+from mujoco_playground import harness
+
+# 训练配置
+config = {
+    "env_name": "AeroGraspEnv",
+    "num_train_steps": 10_000_000,
+    "num_envs": 512,
+    "learning_rate": 3e-4,
+    "entropy_cost": 1e-2,
+    "batch_size": 2048,
+    "ppo_epochs": 8,
+    "clip_epsilon": 0.2,
+    "gamma": 0.99,
+    "GAE_lambda": 0.95,
+    "save_interval": 100000,
+    "eval_interval": 10000,
+}
+
+# 启动训练
+harness.train(config)
+\`\`\`
+
+### 3. Sim2Real 部署
+
+\`\`\`python
+# deploy_grasp.py
+import numpy as np
+from aero_open_sdk import AeroHand
+import time
+
+class GraspController:
+    """抓取控制器"""
+
+    def __init__(self):
+        self.hand = AeroHand()
+        self.hand.home()
+        time.sleep(1)
+
+    def observation_to_hand(self, obs):
+        """
+        将仿真观测转换为硬件命令
+
+        仿真 obs: [joint_pos(7), object_pos(3), ...]
+        硬件 cmd: [0-100] × 6
+        """
+        joint_pos = obs[:7]
+        object_pos = obs[7:10]
+
+        # 简单的启发式控制
+        # 物体越近，手指弯曲越多
+        distance = np.linalg.norm(object_pos)
+
+        # 预定义抓取姿势
+        if distance < 0.05:  # 物体很近
+            return [80, 80, 80, 80, 90, 70]  # 握紧
+        elif distance < 0.10:  # 物体较近
+            return [40, 40, 40, 40, 60, 40]  # 半握
+        else:  # 物体远
+            return [0, 0, 0, 0, 0, 0]  # 张开
+
+    def run(self):
+        """运行抓取"""
+        print("等待物体就位...")
+        time.sleep(2)
+
+        print("开始抓取...")
+        for _ in range(50):
+            # 获取观测（需要视觉系统）
+            obs = self._get_vision_observation()
+
+            # 计算动作
+            cmd = self.observation_to_hand(obs)
+
+            # 执行
+            self.hand.set_joint_positions(cmd)
+            time.sleep(0.05)
+
+        print("抓取完成")
+
+# 使用
+controller = GraspController()
+controller.run()
+\`\`\`
+
+### 常见问题排查
+
+\`\`\`
+问题1：抓取成功率低
+
+检查：
+1. 仿真物理参数是否准确
+2. 域随机化是否足够
+3. 奖励函数是否正确
+
+解决：
+- 增加训练步数
+- 调整奖励函数权重
+- 使用更复杂的策略网络
+
+问题2：Sim2Real 差距大
+
+检查：
+1. 视觉系统标定
+2. 物理参数差异
+3. 执行延迟
+
+解决：
+- 使用域随机化训练
+- 添加执行延迟到仿真
+- 部署时使用低通滤波
+\`\`\`
+      `
+    }
+  },
+
+  // ========== 性能优化技巧 ==========
+  performanceOptimization: {
+    servoOptimization: {
+      title: '舵机控制性能优化',
+      content: `
+## 舵机控制性能优化
+
+### 1. 通信优化
+
+\`\`\`
+优化策略：
+├── 批量命令
+│   └── 一次发送多个舵机命令，减少通信次数
+├── 压缩帧格式
+│   └── 只发送变化的舵机
+└── 异步通信
+    └── 发送后不等待响应，继续执行
+\`\`\`
+
+**批量命令示例：**
+
+\`\`\`python
+# 优化前：逐个发送
+for i in range(7):
+    hand.set_joint_position(i, positions[i])
+    time.sleep(0.01)  # 每舵机10ms
+
+# 优化后：批量发送
+hand.set_joint_positions(positions)  # 一次发送所有
+time.sleep(0.05)  # 等待所有舵机响应
+
+# 时间对比：70ms vs 50ms
+\`\`\`
+
+### 2. 轨迹优化
+
+\`\`\`
+优化策略：
+├── 插值轨迹
+│   ├── 线性插值（简单）
+│   ├── 余弦插值（平滑）
+│   └── 样条插值（最平滑）
+└── 速度规划
+    └── 梯形/ S 曲线速度 profile
+\`\`\`
+
+**余弦插值实现：**
+
+\`\`\`python
+import numpy as np
+
+def cosine_interpolation(start, end, steps):
+    """余弦插值生成平滑轨迹"""
+    t = np.linspace(0, np.pi, steps)
+    return start + (end - start) * (1 - np.cos(t)) / 2
+
+def execute_smooth_motion(hand, start, end, duration=1.0):
+    """执行平滑运动"""
+    steps = int(duration / 0.02)  # 50Hz
+    trajectory = cosine_interpolation(start, end, steps)
+
+    for pos in trajectory:
+        hand.set_joint_positions(pos)
+        time.sleep(0.02)
+\`\`\`
+
+### 3. 预测控制
+
+\`\`\`
+原理：根据当前状态预测未来，补偿延迟
+
+实现：
+1. 估计当前速度和加速度
+2. 预测下一时刻位置
+3. 提前发送命令
+\`\`\`
+
+**预测控制示例：**
+
+\`\`\`python
+class PredictiveController:
+    def __init__(self, hand, prediction_horizon=2):
+        self.hand = hand
+        self.horizon = prediction_horizon
+        self.position_history = []
+        self.velocity_history = []
+
+    def update(self, target_positions):
+        # 记录历史
+        current = self.hand.get_joint_positions()
+        self.position_history.append(current)
+
+        if len(self.position_history) > 10:
+            self.position_history.pop(0)
+
+        # 计算速度和加速度
+        if len(self.position_history) >= 3:
+            vel = np.diff(self.position_history[-3:], axis=0)
+            acc = np.diff(vel, axis=0)
+
+            # 预测未来位置
+            predicted = current + vel[-1] * self.horizon + 0.5 * acc[-1] * self.horizon**2
+
+            # 结合目标
+            cmd = 0.7 * target_positions + 0.3 * predicted
+        else:
+            cmd = target_positions
+
+        self.hand.set_joint_positions(cmd)
+\`\`\`
+
+### 4. 自适应控制参数
+
+\`\`\`
+根据负载自动调整控制参数：
+
+- 轻载时：减小刚度，减少抖动
+- 重载时：增大刚度，保证响应
+\`\`\`
+
+\`\`\`python
+class AdaptiveController:
+    def __init__(self, hand):
+        self.hand = hand
+        self.load_history = []
+
+    def update(self, target_positions):
+        # 读取当前负载
+        loads = self.hand.get_joint_loads()
+        self.load_history.append(loads)
+
+        if len(self.load_history) > 10:
+            avg_load = np.mean(self.load_history[-10:], axis=0)
+
+            # 根据负载调整控制
+            stiffness = np.clip(avg_load / 1000, 0.3, 1.0)
+
+            # 调整后的命令
+            current = self.hand.get_joint_positions()
+            cmd = current + stiffness * (target_positions - current)
+        else:
+            cmd = target_positions
+
+        self.hand.set_joint_positions(cmd)
+\`\`\`
+      `
+    },
+    simulationOptimization: {
+      title: '仿真性能优化',
+      content: `
+## 仿真性能优化
+
+### 1. MJX 加速技巧
+
+\`\`\`python
+# 技巧1：预热 JIT 编译
+# 第一次运行会编译，之后会快很多
+_ = step_fn(state, action)  # 预热
+
+# 技巧2：使用静态形状
+# 动态形状会阻止 JIT 优化
+batch_size = 1024  # 固定
+
+# 技巧3：混合精度
+from jax import np as jnp
+model = nn.with_precision(jnp.float32)
+\`\`\`
+
+### 2. 并行环境配置
+
+\`\`\`python
+# 环境数量选择指南：
+#
+# GPU 内存估算：
+# 每个环境 ≈ 10MB
+# 策略网络 ≈ 50MB
+# 总计 ≈ 10GB for 1024 envs
+
+# 根据你的 GPU 选择：
+# 8GB GPU: num_envs=512
+# 16GB GPU: num_envs=1024
+# 24GB GPU: num_envs=2048
+\`\`\`
+
+### 3. 仿真参数优化
+
+\`\`\`xml
+<!-- MuJoCo 配置优化 -->
+<option>
+    <!-- 时间步 -->
+    <option timestep="0.002"    <!-- 默认0.002，可增大减少计算 -->
+            iterations="50"       <!-- 约束求解迭代 -->
+            ls_iterations="10"/> <!-- 线搜索迭代 -->
+
+    <!-- 禁用不必要的计算 -->
+    <flag energy="disable"      <!-- 关闭能量计算 -->
+          fwdinv="disable"/>    <!-- 关闭前向逆动力学 -->
+</option>
+\`\`\`
+
+### 4. 检查点策略
+
+\`\`\`python
+# 频繁保存会影响训练速度
+# 建议：
+
+save_interval = 100000  # 每10万步保存一次
+eval_interval = 10000   # 每1万步评估一次
+
+# 使用异步保存
+import orbax.checkpoint as ocp
+
+checkpoint_manager = ocp.CheckpointManager(
+    '/path/to/checkpoints',
+    ocp.PyTreeCheckpointer(),
+    # 异步保存，不阻塞训练
+    create=True,
+)
+\`\`\`
+      `
+    }
+  },
+
+  // ========== 调试方法与工具 ==========
+  debugging: {
+    hardwareDebugging: {
+      title: '硬件调试方法',
+      content: `
+## 硬件调试方法
+
+### 1. 串口通信调试
+
+\`\`\`python
+# 启用详细日志
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+hand = AeroHand()
+# 将显示所有串口通信
+\`\`\`
+
+### 2. 逻辑分析仪使用
+
+\`\`\`
+推荐工具：Saleae Logic
+采样率：至少 10MHz
+
+接线：
+- 通道0: ESP32 TX
+- 通道1: ESP32 RX
+- 通道2: 舵机总线
+
+分析：
+1. 确认帧格式正确
+2. 检查时序参数
+3. 验证校验和
+\`\`\`
+
+### 3. 常见问题诊断
+
+\`\`\`
+问题：舵机不响应
+诊断流程：
+1. 检查电源 (5V 3A)
+2. 检查串口连接
+3. 发送归位命令测试
+4. 检查舵机 ID 是否正确
+
+问题：运动不平滑
+诊断流程：
+1. 检查肌腱张力
+2. 检查关节摩擦
+3. 降低控制频率测试
+4. 检查机械干涉
+
+问题：位置不准确
+诊断流程：
+1. 重新配置端点
+2. 检查肌腱打滑
+3. 验证 extend/grasp count
+\`\`\`
+
+### 4. 示波器调试
+
+\`\`\`
+检查舵机控制信号：
+- 确认 PWM 周期正确
+- 确认脉宽在规格范围内
+- 检查信号完整性
+\`\`\`
+      `
+    },
+    softwareDebugging: {
+      title: '软件调试方法',
+      content: `
+## 软件调试方法
+
+### 1. SDK 调试模式
+
+\`\`\`python
+# 启用调试模式
+hand = AeroHand(debug=True)
+
+# 将输出：
+# - 所有发送的命令
+# - 所有接收的响应
+# - 校验和验证结果
+\`\`\`
+
+### 2. 仿真调试工具
+
+\`\`\`python
+# 使用 mujoco.viewer 实时调试
+import mujoco
+import mujoco.viewer
+
+model = mujoco.MjSpec.from_file("aero_hand.xml").to_model()
+data = mujoco.MjData(model)
+
+with mujoco.viewer.launch_passive(model, data) as viewer:
+    while viewer.is_running():
+        # 添加调试可视化
+        vis = viewer.lock()
+        if vis:
+            # 绘制关节角度曲线
+            # 绘制力矩分布
+            pass
+        viewer.sync()
+\`\`\`
+
+### 3. RL 训练调试
+
+\`\`\`python
+# 1. 首先验证奖励函数
+env = AeroGraspEnv()
+obs, _ = env.reset()
+for _ in range(100):
+    # 随机动作
+    action = env.action_space.sample()
+    obs, reward, done, _, info = env.step(action)
+
+    print(f"Reward: {reward:.3f}, Done: {done}")
+    # 检查奖励是否合理
+
+# 2. 检查策略输出
+policy = load_policy("checkpoint")
+obs = env.reset()
+action = policy(obs)
+print(f"Action: {action}")
+# 确认动作在合理范围内
+\`\`\`
+
+### 4. 断点调试技巧
+
+\`\`\`python
+# 在关键位置添加日志
+class AeroHand:
+    def set_joint_positions(self, positions):
+        print(f"[DEBUG] 设置位置: {positions}")
+        try:
+            result = self._send_command(positions)
+            print(f"[DEBUG] 命令成功")
+            return result
+        except Exception as e:
+            print(f"[ERROR] 命令失败: {e}")
+            raise
+\`\`\`
+      `
+    }
+  },
+
+  // ========== 最佳实践与设计模式 ==========
+  bestPractices: {
+    softwareDesign: {
+      title: '软件设计模式',
+      content: `
+## 最佳实践：软件设计模式
+
+### 1. 状态机模式
+
+\`\`\`python
+class HandController:
+    """
+    使用状态机管理手的状态
+
+    状态转换：
+    DISCONNECTED → CONNECTING → CONNECTED
+                                    ↓
+                              HOMING → READY
+                                    ↓
+                              CONTROLLING
+                                    ↓
+                              ERROR ←──┐
+                                    │
+                                    └──────┘ (重试)
+    """
+
+    def __init__(self):
+        self.state = "DISCONNECTED"
+        self.state_handlers = {
+            "DISCONNECTED": self._handle_disconnected,
+            "CONNECTING": self._handle_connecting,
+            "CONNECTED": self._handle_connected,
+            "HOMING": self._handle_homing,
+            "READY": self._handle_ready,
+            "CONTROLLING": self._handle_controlling,
+            "ERROR": self._handle_error,
+        }
+
+    def update(self):
+        handler = self.state_handlers[self.state]
+        self.state = handler()
+
+    def _handle_disconnected(self):
+        # 连接逻辑
+        if self.try_connect():
+            return "CONNECTING"
+        return "DISCONNECTED"
+
+    # ... 其他状态处理
+\`\`\`
+
+### 2. 策略模式
+
+\`\`\`python
+class GraspingStrategy:
+    """抓取策略基类"""
+    def execute(self, hand, observation):
+        raise NotImplementedError
+
+class PinchGrasp(GraspingStrategy):
+    """捏取策略"""
+    def execute(self, hand, obs):
+        # 使用拇指和食指捏取
+        return [30, 0, 0, 0, 50, 30]
+
+class PowerGrasp(GraspingStrategy):
+    """力量抓取策略"""
+    def execute(self, hand, obs):
+        # 全手抓取
+        return [80, 80, 80, 80, 90, 70]
+
+class StrategySelector:
+    """策略选择器"""
+    def __init__(self):
+        self.strategies = {
+            "pinch": PinchGrasp(),
+            "power": PowerGrasp(),
+        }
+
+    def select(self, object_type):
+        if object_type == "small":
+            return self.strategies["pinch"]
+        else:
+            return self.strategies["power"]
+\`\`\`
+
+### 3. 观察者模式
+
+\`\`\`python
+class HandStateObservable:
+    """可观察的手状态"""
+
+    def __init__(self):
+        self._observers = []
+
+    def add_observer(self, observer):
+        self._observers.append(observer)
+
+    def remove_observer(self, observer):
+        self._observers.remove(observer)
+
+    def notify_observers(self, event, data):
+        for observer in self._observers:
+            observer.on_hand_event(event, data)
+
+class HandLogger:
+    """手状态日志记录器"""
+    def on_hand_event(self, event, data):
+        print(f"[LOG] {event}: {data}")
+
+class HandTelemetry:
+    """手状态遥测"""
+    def on_hand_event(self, event, data):
+        # 发送到监控服务
+        send_to_cloudwatch(event, data)
+\`\`\`
+
+### 4. 工厂模式
+
+\`\`\`python
+class HandFactory:
+    """创建不同类型的手"""
+    @staticmethod
+    def create_left_hand():
+        return AeroHand(side="left", port="/dev/ttyUSB0")
+
+    @staticmethod
+    def create_right_hand():
+        return AeroHand(side="right", port="/dev/ttyUSB1")
+
+    @staticmethod
+    def create_simulated_hand():
+        return SimulatedAeroHand()
+\`\`\`
+      `
+    },
+    hardwareMaintenance: {
+      title: '硬件维护指南',
+      content: `
+## 最佳实践：硬件维护
+
+### 1. 日常维护检查表
+
+\`\`\`
+每次使用前：
+□ 检查肌腱是否磨损
+□ 检查螺丝是否松动
+□ 检查关节运动是否顺畅
+□ 测试所有舵机响应
+
+每周维护：
+□ 清洁关节和滑轮
+□ 检查肌腱张力
+□ 润滑关节（适当）
+□ 检查电缆连接
+
+每月维护：
+□ 全面检查所有零件
+□ 重新校准端点
+□ 检查电源供应
+□ 备份配置
+\`\`\`
+
+### 2. 肌腱维护
+
+\`\`\`
+肌腱寿命：
+- Dyneema 钓鱼线：约 100万次循环
+- 缝合线：约 50万次循环
+
+更换时机：
+- 表面磨损可见
+- 拉伸明显增加
+- 运动不平滑
+
+更换步骤：
+1. 卸下旧肌腱
+2. 清洁滑轮和导轨
+3. 穿引新肌腱
+4. 调整预紧力
+5. 测试运动范围
+\`\`\`
+
+### 3. 舵机维护
+
+\`\`\`
+注意事项：
+- 不要堵转（听到滋滋声就停止）
+- 保持电源稳定
+- 定期检查齿轮磨损
+
+故障排查：
+- 舵机不响应 → 检查供电、ID、连接
+- 舵机抖动 → 检查负载、摩擦、控制信号
+- 舵机发热 → 正常现象（<60°C），过烫需检查
+\`\`\`
+
+### 4. 存储和运输
+
+\`\`\`
+存储：
+- 放置在干燥处
+- 避免阳光直射
+- 张开手指存放（减少肌腱应力）
+
+运输：
+- 使用原包装或软垫
+- 固定所有零件
+- 标记"易碎"
+\`\`\`
+      `
+    },
+    safetyGuidelines: {
+      title: '安全操作指南',
+      content: `
+## 最佳实践：安全操作
+
+### 1. 电气安全
+
+\`\`\`
+⚠️ 危险：
+- 电源反接 → 烧毁电路
+- 电压过高 → 损坏舵机
+- 静电放电 → 损坏芯片
+
+预防措施：
+✓ 始终确认电源极性
+✓ 使用指定电压 (5V)
+✓ 触碰前释放静电
+✓ 使用带过流保护的电源
+\`\`\`
+
+### 2. 机械安全
+
+\`\`\`
+⚠️ 危险：
+- 手指挤压 → 夹伤
+- 肌腱断裂 → 弹射伤害
+- 零件脱落 → 飞溅伤害
+
+预防措施：
+✓ 运行前检查所有零件
+✓ 保持安全距离
+✓ 不要超负荷使用
+✓ 定期检查紧固件
+\`\`\`
+
+### 3. 操作规程
+
+\`\`\`
+启动前：
+1. 检查所有连接
+2. 确认归位完成
+3. 测试紧急停止
+4. 确认无障碍物
+
+运行中：
+1. 观察运动是否正常
+2. 监听异常声音
+3. 保持安全距离
+4. 准备紧急停止
+
+停止后：
+1. 复位到安全位置
+2. 关闭电源
+3. 记录异常情况
+\`\`\`
+
+### 4. 紧急处理
+
+\`\`\`
+发生意外时：
+1. 立即按下紧急停止
+2. 切断电源
+3. 检查人员伤亡
+4. 检查设备损坏
+5. 分析原因并记录
+\`\`\`
+      `
+    }
   }
 }
