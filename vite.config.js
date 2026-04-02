@@ -37,12 +37,12 @@ export default defineConfig({
     assetsDir: 'assets',
     sourcemap: false,
     target: 'es2015',
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Element Plus 及其依赖单独打包
+            // Element Plus 单独打包
             if (id.includes('element-plus')) {
               return 'element-plus'
             }
@@ -50,16 +50,10 @@ export default defineConfig({
             if (id.includes('echarts')) {
               return 'echarts'
             }
-            // Markdown 解析库
-            if (id.includes('markdown-it') || id.includes('highlight.js')) {
-              return 'markdown'
-            }
-            // Vue 生态
+            // Vue 核心单独打包
             if (id.includes('vue') || id.includes('@vue')) {
-              return 'vue-vendor'
+              return 'vue'
             }
-            // 其他 node_modules 统一打包
-            return 'vendor'
           }
         }
       }
