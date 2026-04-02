@@ -9,6 +9,7 @@ import MindMap from '@/views/MindMap.vue'
 import TechDocs from '@/views/TechDocs.vue'
 import JointMapping from '@/views/JointMapping.vue'
 import FlowViewer from '@/views/FlowViewer.vue'
+import Bookmarks from '@/views/Bookmarks.vue'
 
 const routes = [
   {
@@ -70,6 +71,12 @@ const routes = [
     name: 'FlowViewer',
     component: FlowViewer,
     meta: { title: '技术流程可视化' }
+  },
+  {
+    path: '/bookmarks',
+    name: 'Bookmarks',
+    component: Bookmarks,
+    meta: { title: '我的收藏' }
   }
 ]
 
