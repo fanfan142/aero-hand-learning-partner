@@ -182,7 +182,7 @@ const router = createRouter({
   // GitHub Pages 使用 hash 模式
   history: (
     import.meta.env.VITE_USE_HASH_ROUTER === 'true' ||
-    import.meta.env.BASE_URL === '/aero-hand-learning-partner/'
+    import.meta.env.BASE_URL !== '/'
   )
     ? createWebHashHistory()
     : createWebHistory(),
