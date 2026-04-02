@@ -348,7 +348,7 @@ import {
   Setting, Sunny, Moon, VideoPlay, Bell, ChatLineSquare,
   Folder, Download, Upload, RefreshLeft, Warning,
   InfoFilled, Check, Brush, Grid, CircleCheck,
-  Delete, Trophy, MagicStick, Document
+  Delete, Trophy, MagicStick, Document, Translate
 } from '@element-plus/icons-vue'
 
 const preferencesStore = usePreferencesStore()
